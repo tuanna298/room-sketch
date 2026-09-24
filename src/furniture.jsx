@@ -201,7 +201,9 @@ export function FurnitureShape({ type, w, h, color }) {
       const strokeW = Math.max(4, h * 0.1)
       return (
         <g stroke={MEASURE_COLOR} fill={MEASURE_COLOR}>
-          <line x1={0} y1={midY} x2={w} y2={midY} strokeWidth={strokeW} />
+          {/* Thân line dừng đúng tại đáy 2 tam giác — không chạy vào phần chóp đang
+              thu nhỏ, nếu không đoạn cuối (dày hơn chóp) sẽ thò ra ngoài rìa tam giác. */}
+          <line x1={arrow} y1={midY} x2={w - arrow} y2={midY} strokeWidth={strokeW} />
           <polygon points={`0,${midY} ${arrow},${midY - arrow * 0.5} ${arrow},${midY + arrow * 0.5}`} />
           <polygon
             points={`${w},${midY} ${w - arrow},${midY - arrow * 0.5} ${w - arrow},${midY + arrow * 0.5}`}
