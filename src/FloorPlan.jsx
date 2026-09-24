@@ -453,6 +453,8 @@ function SinglePropertiesPanel({
   onRotate,
   onUngroup,
   onDelete,
+  onBringToFront,
+  onSendToBack,
 }) {
   const type = typeOf(item.category, item.type);
   return (
@@ -490,6 +492,12 @@ function SinglePropertiesPanel({
         <button type="button" onClick={onRotate}>
           Xoay 90° ({item.rotation ?? 0}°)
         </button>
+        <button type="button" onClick={onBringToFront}>
+          Đưa lên trên cùng
+        </button>
+        <button type="button" onClick={onSendToBack}>
+          Đưa xuống dưới cùng
+        </button>
         {item.groupId && (
           <button type="button" onClick={onUngroup}>
             Rã nhóm
@@ -512,6 +520,8 @@ function MultiPropertiesPanel({
   onGroup,
   onUngroup,
   onDelete,
+  onBringToFront,
+  onSendToBack,
 }) {
   return (
     <aside className="properties-panel">
@@ -551,11 +561,33 @@ function MultiPropertiesPanel({
         <button type="button" onClick={onRotateEach}>
           Xoay từng món 90°
         </button>
+        <button type="button" onClick={onBringToFront}>
+          Đưa lên trên cùng
+        </button>
+        <button type="button" onClick={onSendToBack}>
+          Đưa xuống dưới cùng
+        </button>
         <button type="button" className="danger" onClick={onDelete}>
           Xoá tất cả
         </button>
       </div>
     </aside>
+  );
+}
+
+// Menu chuột phải: thay cho menu mặc định của trình duyệt (đã chặn bằng
+// onContextMenu={e => e.preventDefault()} ở canvas) — cùng 2 hành động sắp
+// lớp có trong bảng thuộc tính, đặt đúng tại vị trí con trỏ vừa bấm.
+function ContextMenu({ x, y, onBringToFront, onSendToBack }) {
+  return (
+    <div className="context-menu" style={{ left: x, top: y }}>
+      <button type="button" onClick={onBringToFront}>
+        Đưa lên trên cùng
+      </button>
+      <button type="button" onClick={onSendToBack}>
+        Đưa xuống dưới cùng
+      </button>
+    </div>
   );
 }
 
@@ -859,6 +891,7 @@ export default function FloorPlan() {
   const [view, setView] = useState(() => computeFitViewBox(initialState.items));
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, ids } — toạ độ màn hình (client)
   const svgRef = useRef(null);
   const drag = useRef(null);
   const marqueeDrag = useRef(null);
@@ -1229,6 +1262,24 @@ export default function FloorPlan() {
     [items, selectedIds, groupMembersOf, toSvgPoint],
   );
 
+  // Chuột phải vào một vật thể: chọn nó (giữ nguyên lựa chọn hiện tại nếu vật
+  // đó đã nằm trong đó, để mở menu context cho cả cụm đang chọn) rồi mở menu
+  // context tại đúng vị trí con trỏ, thay cho menu mặc định của trình duyệt.
+  const handleItemContextMenu = useCallback(
+    (id) => (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const clicked = items.find((it) => it.id === id);
+      if (!clicked) return;
+      const nextSelection = selectedIds.includes(id)
+        ? selectedIds
+        : groupMembersOf(clicked);
+      setSelectedIds(nextSelection);
+      setContextMenu({ x: e.clientX, y: e.clientY, ids: nextSelection });
+    },
+    [items, selectedIds, groupMembersOf],
+  );
+
   const handleBodyPointerMove = useCallback(
     (id) => (e) => {
       const d = drag.current;
@@ -1461,6 +1512,24 @@ export default function FloorPlan() {
     [items, pushHistory],
   );
 
+  // Thứ tự vẽ chồng lớp theo đúng thứ tự trong mảng items (container luôn vẽ
+  // dưới nội thất bất kể thứ tự, xem [...containers, ...furniture] lúc render)
+  // — đưa các vật đang chọn ra đầu (dưới cùng) hoặc cuối (trên cùng) mảng,
+  // giữ nguyên thứ tự tương đối giữa chúng với nhau.
+  const reorderIds = useCallback(
+    (ids, dir) => {
+      if (ids.length === 0) return;
+      pushHistory();
+      setItems((prev) => {
+        const idSet = new Set(ids);
+        const selected = prev.filter((it) => idSet.has(it.id));
+        const rest = prev.filter((it) => !idSet.has(it.id));
+        return dir === "front" ? [...rest, ...selected] : [...selected, ...rest];
+      });
+    },
+    [pushHistory],
+  );
+
   const groupSelected = useCallback(() => {
     if (selectedIds.length < 2) return;
     pushHistory();
@@ -1629,6 +1698,10 @@ export default function FloorPlan() {
         return;
       }
       if (e.key === "Escape") {
+        if (contextMenu) {
+          setContextMenu(null);
+          return;
+        }
         if (openCommentId) {
           setOpenCommentId(null);
           return;
@@ -1676,6 +1749,7 @@ export default function FloorPlan() {
     selectedIds,
     gridSize,
     openCommentId,
+    contextMenu,
     undo,
     redo,
     copySelection,
@@ -1687,6 +1761,18 @@ export default function FloorPlan() {
     moveSelection,
     applyZoom,
   ]);
+
+  // Đóng menu context khi bấm ra ngoài nó (nút bấm bên trong menu tự đóng
+  // ngay sau khi chạy hành động, không đi qua đường này).
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+    const onPointerDown = (e) => {
+      if (e.target.closest?.(".context-menu")) return;
+      setContextMenu(null);
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [contextMenu]);
 
   const viewBoxStr = `${view.x} ${view.y} ${view.w} ${view.h}`;
   const selectedItems = items.filter((it) => selectedIds.includes(it.id));
@@ -1723,9 +1809,12 @@ export default function FloorPlan() {
     : null;
 
   return (
-    <div className="plan-shell" data-theme={darkMode ? "dark" : "light"}>
+    <div
+      className="plan-shell"
+      data-theme={darkMode ? "dark" : "light"}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="floating-topbar">
-        <GridSizeControl value={gridSize} onChange={setGridSize} />
         <button
           type="button"
           className="icon-btn theme-toggle"
@@ -1734,6 +1823,7 @@ export default function FloorPlan() {
         >
           {darkMode ? <IconSun /> : <IconMoon />}
         </button>
+        <GridSizeControl value={gridSize} onChange={setGridSize} />
         {status && <span className="plan-status">{status}</span>}
       </div>
 
@@ -1746,6 +1836,7 @@ export default function FloorPlan() {
         onPointerDownCapture={handleCanvasPointerDownCapture}
         onPointerMove={handleCanvasPointerMove}
         onPointerUp={handleCanvasPointerUp}
+        onContextMenu={(e) => e.preventDefault()}
         style={{
           cursor: canvasCursor === "default" ? undefined : canvasCursor,
           background: theme.canvasBg,
@@ -1766,6 +1857,7 @@ export default function FloorPlan() {
             onPointerDown={handleBodyPointerDown(item.id)}
             onPointerMove={handleBodyPointerMove(item.id)}
             onPointerUp={handlePointerUp}
+            onContextMenu={handleItemContextMenu(item.id)}
             style={{
               cursor: canvasCursor === "default" ? "grab" : canvasCursor,
               touchAction: "none",
@@ -1873,6 +1965,8 @@ export default function FloorPlan() {
           onRotate={() => rotateIds([selectedItems[0].id])}
           onUngroup={ungroupSelected}
           onDelete={() => deleteIds([selectedItems[0].id])}
+          onBringToFront={() => reorderIds([selectedItems[0].id], "front")}
+          onSendToBack={() => reorderIds([selectedItems[0].id], "back")}
         />
       )}
       {selectedItems.length > 1 && selectionBox && (
@@ -1885,6 +1979,22 @@ export default function FloorPlan() {
           onGroup={groupSelected}
           onUngroup={ungroupSelected}
           onDelete={() => deleteIds(selectedIds)}
+          onBringToFront={() => reorderIds(selectedIds, "front")}
+          onSendToBack={() => reorderIds(selectedIds, "back")}
+        />
+      )}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onBringToFront={() => {
+            reorderIds(contextMenu.ids, "front");
+            setContextMenu(null);
+          }}
+          onSendToBack={() => {
+            reorderIds(contextMenu.ids, "back");
+            setContextMenu(null);
+          }}
         />
       )}
 

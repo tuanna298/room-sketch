@@ -451,6 +451,38 @@ body,
   outline-offset: 2px;
 }
 
+/* ===== Menu chuột phải: thay cho menu mặc định của trình duyệt ===== */
+.context-menu {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  min-width: 170px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px var(--panel-shadow);
+  backdrop-filter: blur(6px);
+}
+
+.context-menu button {
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.context-menu button:hover {
+  background: var(--btn-hover-bg);
+}
+
 .comment-popup {
   position: absolute;
   transform: translate(-8px, 12px);

@@ -42,6 +42,10 @@ vào giữa khung nhìn hiện tại, sau đó:
 - Hoặc chỉnh số liệu chính xác ở **bảng thuộc tính** bên phải (X, Y, Rộng,
   Cao) — gõ tự do (chọn hết, xoá, gõ số mới) rồi Tab/Enter/click ra ngoài để
   áp dụng, không còn bị ép về giá trị tối thiểu ngay trên từng phím gõ.
+- **Chuột phải vào một vật thể** để mở menu "Đưa lên trên cùng" / "Đưa xuống
+  dưới cùng" (2 nút này cũng có sẵn trong bảng thuộc tính) — chỉnh thứ tự
+  chồng lớp khi 2 vật thể đè lên nhau. Menu chuột phải mặc định của trình
+  duyệt đã bị tắt trên toàn bộ canvas.
 
 ## Nhóm nhiều vật thể
 
