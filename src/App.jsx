@@ -7,7 +7,8 @@ function App() {
         <h1>Mặt bằng khu phụ (WC)</h1>
         <p>
           Số hoá lại từ bản phác thảo gốc, đơn vị milimét. Nền kẻ ô: ô nhỏ 100mm,
-          ô đậm 500mm, dùng để ước lượng khoảng cách khi xem bản vẽ.
+          ô đậm 500mm, dùng để ước lượng khoảng cách khi xem bản vẽ. Kéo cửa hoặc
+          thiết bị để sắp xếp lại, sau đó bấm "Lưu thay đổi" để ghi đè vào file.
         </p>
       </header>
 
