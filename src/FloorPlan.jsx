@@ -716,7 +716,7 @@ export default function FloorPlan() {
     pushHistory()
     setItems((prev) => prev.map((it) => {
       if (!selectedIds.includes(it.id)) return it
-      const { groupId, ...rest } = it
+      const { groupId: _groupId, ...rest } = it
       return rest
     }))
   }, [selectedIds, pushHistory])
