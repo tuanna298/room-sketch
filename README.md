@@ -1,4 +1,4 @@
-# Floor Plan Viewer
+# RoomSketch
 
 Trình vẽ mặt bằng bằng React + Vite, giao diện toàn màn hình kiểu Figma (canvas
 trải kín, các bảng nổi phía trên). Không có căn phòng nào đóng cứng sẵn — bắt
