@@ -79,8 +79,26 @@ hiển thị lẫn mức làm tròn khi kéo vật thể tự do (không khoá t
   như trước — không xung đột với việc pan.
 
 Khung nhìn không còn tự "nhảy" theo mỗi lần thêm/kéo/resize nữa — chỉ tự co
-theo toàn bộ nội dung khi tải trang, Tải từ file, Xoá hết, hoặc Undo/Redo, để
-không phá vị trí pan/zoom người dùng vừa tự chỉnh.
+theo toàn bộ nội dung khi tải trang, Tải từ file, hoặc Undo/Redo, để không phá
+vị trí pan/zoom người dùng vừa tự chỉnh.
+
+## Thanh công cụ (giữa, dưới cùng)
+
+Ba công cụ chọn bằng chuột hoặc phím tắt một chữ cái (không cần Cmd/Ctrl):
+
+- **V — Di chuyển**: mặc định. Chọn, kéo, resize, marquee-select như mô tả ở
+  trên.
+- **H — Bàn tay**: mọi thao tác kéo đều thành pan, xuyên qua mọi vật thể mà
+  không chọn hay di chuyển gì (giữ Space ở công cụ Di chuyển cũng có tác dụng
+  tương đương, tạm thời).
+- **C — Bình luận**: click vào bản vẽ để để lại một ghi chú tại đúng điểm đó
+  (ghim vàng); click ghim đã có để xem/sửa lại, dù đang ở công cụ nào. Bỏ
+  trống nội dung rồi đóng lại sẽ tự xoá ghi chú đó.
+
+## Giao diện sáng / tối
+
+Mặc định nền sáng. Bấm icon mặt trời/mặt trăng ở thanh trên để đổi — lựa chọn
+được nhớ lại cho lần mở sau (riêng với dữ liệu bản vẽ).
 
 ## Phím tắt
 
@@ -119,13 +137,16 @@ với autosave ở trên:
   không có tác dụng trên bản build tĩnh.
 - **Tải từ file** — nạp lại đúng nội dung đang có trong `src/layout.json`,
   ghi đè bản vẽ hiện tại (kể cả localStorage).
-- **Xoá hết** — xoá toàn bộ bản vẽ hiện tại (có xác nhận trước khi xoá).
+
+Bình luận cũng tự lưu vào localStorage và vào `src/layout.json` cùng với
+`items`/`gridSize`.
 
 ## Cấu trúc
 
 - `src/FloorPlan.jsx` — canvas SVG toàn màn hình (pan/zoom bằng chuột-trackpad,
-  khung nhìn tự co theo nội dung khi tải/xoá/undo), toolbar container/nội
-  thất, chọn đơn/nhóm/marquee, kéo-di chuyển-cả-cụm, resize tỉ lệ, khoá nhẹ,
+  khung nhìn tự co theo nội dung khi tải/undo), toolbar container/nội thất,
+  thanh công cụ Di chuyển/Bàn tay/Bình luận, giao diện sáng/tối, modal hướng
+  dẫn, chọn đơn/nhóm/marquee, kéo-di chuyển-cả-cụm, resize tỉ lệ, khoá nhẹ,
   đường kích thước tự động, undo/redo, clipboard, và toàn bộ phím tắt.
 - `src/furniture.jsx` — danh mục loại container (`CONTAINER_TYPES`) và nội
   thất (`FURNITURE_TYPES`), cùng hàm vẽ hình dạng theo toạ độ cục bộ

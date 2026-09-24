@@ -9,12 +9,19 @@ import { FURNITURE_TYPES, CONTAINER_TYPES, MIN_SIZE, FurnitureShape, typeOf } fr
 // kéo/xoá cùng lúc, có khoá nhẹ khi kéo lại gần vật khác, và đầy đủ phím tắt quen
 // thuộc (Cmd/Ctrl+Z/A/C/X/V/D/G). Toàn bộ trạng thái tự lưu vào localStorage.
 
-const WALL_COLOR = '#e8e8e8'
 const FURNITURE_COLOR = '#c98a4b'
-const DIM_COLOR = '#39d353'
-const SELECT_COLOR = '#5ab8ff'
-const GUIDE_COLOR = '#ff5ac8'
-const MARQUEE_COLOR = '#5ab8ff'
+const DIM_COLOR = '#1f9d4d'
+const SELECT_COLOR = '#2f80ed'
+const GUIDE_COLOR = '#e0369d'
+const MARQUEE_COLOR = '#2f80ed'
+
+// Tường/lưới cần đảo màu giữa 2 theme để luôn nổi trên nền (trắng thì vô hình trên
+// nền sáng, cần chuyển sẫm màu) — các màu còn lại giữ nguyên vì đọc ổn trên cả hai.
+const THEME_COLORS = {
+  light: { canvasBg: '#f4f4f2', wall: '#2b2b2b', gridMinor: '#e3e3df', gridMajor: '#c7c9c2' },
+  dark: { canvasBg: '#050505', wall: '#e8e8e8', gridMinor: '#182018', gridMajor: '#2a4632' },
+}
+const THEME_STORAGE_KEY = 'floorplan-dark-mode'
 
 const GRID_SPAN = 20000
 const WORLD_LIMIT = 20000
@@ -282,17 +289,17 @@ function AlignGuides({ x, y, view }) {
   )
 }
 
-function GridBackground({ gridSize, onPointerDown, onPointerMove, onPointerUp }) {
+function GridBackground({ gridSize, theme, onPointerDown, onPointerMove, onPointerUp }) {
   const major = gridSize * GRID_MAJOR_MULT
   return (
     <>
       <defs>
         <pattern id="grid-minor" width={gridSize} height={gridSize} patternUnits="userSpaceOnUse">
-          <path d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`} fill="none" stroke="#182018" strokeWidth={2} />
+          <path d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`} fill="none" stroke={theme.gridMinor} strokeWidth={2} />
         </pattern>
         <pattern id="grid-major" width={major} height={major} patternUnits="userSpaceOnUse">
           <rect width={major} height={major} fill="url(#grid-minor)" />
-          <path d={`M ${major} 0 L 0 0 0 ${major}`} fill="none" stroke="#2a4632" strokeWidth={3} />
+          <path d={`M ${major} 0 L 0 0 0 ${major}`} fill="none" stroke={theme.gridMajor} strokeWidth={3} />
         </pattern>
       </defs>
       <rect
@@ -307,14 +314,14 @@ function GridBackground({ gridSize, onPointerDown, onPointerMove, onPointerUp })
   )
 }
 
-function ObjectToolbar({ onAdd }) {
+function ObjectToolbar({ theme, onAdd }) {
   return (
     <div className="furniture-toolbar">
       <div className="toolbar-section-label">Cấu trúc cố định</div>
       {CONTAINER_TYPES.map((t) => (
         <button key={t.id} type="button" className="furniture-btn" onClick={() => onAdd('container', t.id)}>
           <svg viewBox={`0 0 ${t.width} ${t.height}`} className="furniture-icon">
-            <FurnitureShape type={t.id} w={t.width} h={t.height} color={WALL_COLOR} />
+            <FurnitureShape type={t.id} w={t.width} h={t.height} color={theme.wall} />
           </svg>
           <span>{t.label}</span>
         </button>
@@ -441,18 +448,164 @@ function GridSizeControl({ value, onChange }) {
   )
 }
 
+// ===== Icon SVG nhỏ, gọn — cùng phong cách nét đơn với phần còn lại của app =====
+const ICON_PROPS = { viewBox: '0 0 24 24', width: 18, height: 18, fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
+
+function IconMove() {
+  return <svg {...ICON_PROPS}><path d="M12 2 L12 22 M2 12 L22 12 M12 2 L9 5 M12 2 L15 5 M12 22 L9 19 M12 22 L15 19 M2 12 L5 9 M2 12 L5 15 M22 12 L19 9 M22 12 L19 15" /></svg>
+}
+function IconHand() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M8 13V6a1.5 1.5 0 0 1 3 0v5M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11.5V6a1.5 1.5 0 0 1 3 0v8M8 13l-1.8-1.8a1.4 1.4 0 0 0-2 2L8 17a6 6 0 0 0 6 3h1a6 6 0 0 0 6-6v-3.5a1.5 1.5 0 0 0-3 0" />
+    </svg>
+  )
+}
+function IconComment() {
+  return <svg {...ICON_PROPS}><path d="M4 5h16v11H9l-4 4V5Z" /></svg>
+}
+function IconSun() {
+  return <svg {...ICON_PROPS}><circle cx="12" cy="12" r="4" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg>
+}
+function IconMoon() {
+  return <svg {...ICON_PROPS}><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" /></svg>
+}
+function IconHelp() {
+  return <svg {...ICON_PROPS} width={22} height={22}><circle cx="12" cy="12" r="9.5" /><path d="M9.2 9.3a2.8 2.8 0 1 1 3.9 2.6c-.9.4-1.4 1-1.4 1.9v.4" /><circle cx="12" cy="17" r="0.15" fill="currentColor" stroke="none" /></svg>
+}
+function IconClose() {
+  return <svg {...ICON_PROPS}><path d="M5 5l14 14M19 5L5 19" /></svg>
+}
+function IconTrash() {
+  return <svg {...ICON_PROPS}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
+}
+
+function ToolDock({ tool, onChange }) {
+  const tools = [
+    { id: 'move', label: 'Di chuyển (V)', icon: <IconMove /> },
+    { id: 'hand', label: 'Bàn tay (H)', icon: <IconHand /> },
+    { id: 'comment', label: 'Bình luận (C)', icon: <IconComment /> },
+  ]
+  return (
+    <div className="tool-dock">
+      {tools.map((t) => (
+        <button
+          key={t.id} type="button" title={t.label}
+          className={`tool-dock-btn${tool === t.id ? ' active' : ''}`}
+          onClick={() => onChange(t.id)}
+        >
+          {t.icon}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function CommentPin({ x, y, active, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`comment-pin${active ? ' active' : ''}`}
+      style={{ left: x, top: y }}
+      onClick={onClick}
+    >
+      <IconComment />
+    </button>
+  )
+}
+
+function CommentPopup({ x, y, text, onChangeText, onClose, onDelete }) {
+  const areaRef = useRef(null)
+  useEffect(() => { areaRef.current?.focus() }, [])
+  return (
+    <div className="comment-popup" style={{ left: x, top: y }} onPointerDown={(e) => e.stopPropagation()}>
+      <textarea
+        ref={areaRef}
+        value={text}
+        placeholder="Viết bình luận…"
+        onChange={(e) => onChangeText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose()
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) onClose()
+        }}
+      />
+      <div className="comment-popup-actions">
+        <button type="button" className="danger" onClick={onDelete}><IconTrash /></button>
+        <button type="button" onClick={onClose}>Xong</button>
+      </div>
+    </div>
+  )
+}
+
+function HelpModal({ onClose }) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Hướng dẫn sử dụng</h2>
+          <button type="button" className="icon-btn" onClick={onClose}><IconClose /></button>
+        </div>
+
+        <section>
+          <h3>Chuột / trackpad</h3>
+          <ul>
+            <li>Cuộn — pan toàn canvas</li>
+            <li>Ctrl/Cmd + cuộn, hoặc pinch trackpad — zoom quanh con trỏ</li>
+            <li>Giữ Space và kéo, hoặc kéo bằng nút chuột giữa — pan bằng tay</li>
+            <li>Kéo trên nền trống (công cụ Di chuyển) — chọn nhiều bằng khung</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Công cụ (thanh dưới cùng)</h3>
+          <ul>
+            <li><b>V</b> — Di chuyển: chọn, kéo, resize vật thể</li>
+            <li><b>H</b> — Bàn tay: chỉ để pan, không chọn/di chuyển gì</li>
+            <li><b>C</b> — Bình luận: click vào bản vẽ để để lại ghi chú</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Phím tắt</h3>
+          <ul>
+            <li>Cmd/Ctrl + Z / Shift+Z — Hoàn tác / Làm lại</li>
+            <li>Cmd/Ctrl + A — Chọn tất cả</li>
+            <li>Cmd/Ctrl + C / X / V — Copy / Cắt / Dán</li>
+            <li>Cmd/Ctrl + D — Nhân đôi lựa chọn</li>
+            <li>Cmd/Ctrl + G / Shift+G — Nhóm / Rã nhóm</li>
+            <li>Cmd/Ctrl + '+' / '-' — Zoom vào / ra</li>
+            <li>Shift + 1 — Zoom vừa khít toàn bộ</li>
+            <li>Shift + 2 — Zoom vừa khít lựa chọn</li>
+            <li>Delete / Backspace — Xoá lựa chọn</li>
+            <li>Mũi tên (giữ Shift: theo ô lưới) — Di chuyển lựa chọn</li>
+            <li>Escape — Bỏ chọn</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  )
+}
+
 function loadInitialState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return { items: parsed, gridSize: DEFAULT_GRID }
-      return { items: parsed.items ?? [], gridSize: parsed.gridSize ?? DEFAULT_GRID }
+      if (Array.isArray(parsed)) return { items: parsed, gridSize: DEFAULT_GRID, comments: [] }
+      return { items: parsed.items ?? [], gridSize: parsed.gridSize ?? DEFAULT_GRID, comments: parsed.comments ?? [] }
     }
   } catch {
     // localStorage không khả dụng (chế độ riêng tư, bị chặn...) — bắt đầu trắng.
   }
-  return { items: [], gridSize: DEFAULT_GRID }
+  return { items: [], gridSize: DEFAULT_GRID, comments: [] }
+}
+
+function loadInitialDarkMode() {
+  try {
+    return localStorage.getItem(THEME_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
 }
 
 function fileItems() {
@@ -460,10 +613,20 @@ function fileItems() {
   return fileLayout.items ?? []
 }
 
+function fileComments() {
+  if (Array.isArray(fileLayout)) return []
+  return fileLayout.comments ?? []
+}
+
 export default function FloorPlan() {
   const initialState = useRef(loadInitialState()).current
   const [items, setItems] = useState(initialState.items)
   const [gridSize, setGridSize] = useState(initialState.gridSize)
+  const [comments, setComments] = useState(initialState.comments)
+  const [openCommentId, setOpenCommentId] = useState(null)
+  const [darkMode, setDarkMode] = useState(loadInitialDarkMode)
+  const [tool, setTool] = useState('move')
+  const [helpOpen, setHelpOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState([])
   const [status, setStatus] = useState('')
   const [guides, setGuides] = useState({ x: null, y: null })
@@ -482,16 +645,34 @@ export default function FloorPlan() {
   const past = useRef([])
   const future = useRef([])
 
+  const theme = THEME_COLORS[darkMode ? 'dark' : 'light']
+
   useEffect(() => {
     itemsRef.current = items
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ gridSize, items }))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ gridSize, items, comments }))
     } catch {
       // bỏ qua nếu trình duyệt chặn localStorage
     }
-  }, [items, gridSize])
+  }, [items, gridSize, comments])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, String(darkMode))
+    } catch {
+      // bỏ qua nếu trình duyệt chặn localStorage
+    }
+  }, [darkMode])
 
   useEffect(() => { viewRef.current = view }, [view])
+
+  const toSvgPoint = useCallback((clientX, clientY) => {
+    const svg = svgRef.current
+    const pt = svg.createSVGPoint()
+    pt.x = clientX
+    pt.y = clientY
+    return pt.matrixTransform(svg.getScreenCTM().inverse())
+  }, [])
 
   // Giữ Space để pan bằng tay (con trỏ đổi thành bàn tay), giống Figma. Bỏ qua khi
   // đang gõ trong một ô nhập để không chặn phím cách bình thường.
@@ -553,17 +734,34 @@ export default function FloorPlan() {
     return () => svg.removeEventListener('wheel', onWheel)
   }, [applyZoom])
 
-  // Pan bằng tay: giữ Space rồi kéo, hoặc kéo bằng nút chuột giữa — bắt ở pha
-  // capture trên toàn canvas để "đè" trước mọi thao tác chọn/di chuyển vật thể ở
-  // bên dưới, y hệt Hand tool của Figma.
+  // Pan bằng tay: giữ Space rồi kéo, kéo bằng nút chuột giữa, hoặc đang ở công cụ
+  // Bàn tay (H) — bắt ở pha capture trên toàn canvas để "đè" trước mọi thao tác
+  // chọn/di chuyển vật thể hay đặt bình luận ở bên dưới, y hệt Figma. Ở công cụ
+  // Bình luận (C), một cú click (không kéo) sẽ mở/tạo ghi chú tại đúng điểm đó.
   const handleCanvasPointerDownCapture = useCallback((e) => {
-    if (!(spaceHeld || e.button === 1)) return
-    e.preventDefault()
-    e.stopPropagation()
-    e.currentTarget.setPointerCapture(e.pointerId)
-    panDrag.current = { startClient: { x: e.clientX, y: e.clientY }, startView: { ...viewRef.current } }
-    setIsPanning(true)
-  }, [spaceHeld])
+    if (spaceHeld || tool === 'hand' || e.button === 1) {
+      e.preventDefault()
+      e.stopPropagation()
+      e.currentTarget.setPointerCapture(e.pointerId)
+      panDrag.current = { startClient: { x: e.clientX, y: e.clientY }, startView: { ...viewRef.current } }
+      setIsPanning(true)
+      return
+    }
+    if (tool === 'comment') {
+      e.preventDefault()
+      e.stopPropagation()
+      const pt = toSvgPoint(e.clientX, e.clientY)
+      const tolerance = viewRef.current.w * 0.025
+      const hit = comments.find((c) => Math.hypot(c.x - pt.x, c.y - pt.y) <= tolerance)
+      if (hit) {
+        setOpenCommentId(hit.id)
+      } else {
+        const created = { id: uid('comment'), x: pt.x, y: pt.y, text: '' }
+        setComments((prev) => [...prev, created])
+        setOpenCommentId(created.id)
+      }
+    }
+  }, [spaceHeld, tool, comments, toSvgPoint])
 
   const handleCanvasPointerMove = useCallback((e) => {
     const p = panDrag.current
@@ -610,14 +808,6 @@ export default function FloorPlan() {
     setSelectedIds([])
     setView(computeFitViewBox(next))
     setStatus('')
-  }, [])
-
-  const toSvgPoint = useCallback((clientX, clientY) => {
-    const svg = svgRef.current
-    const pt = svg.createSVGPoint()
-    pt.x = clientX
-    pt.y = clientY
-    return pt.matrixTransform(svg.getScreenCTM().inverse())
   }, [])
 
   const groupMembersOf = useCallback((item) => {
@@ -886,33 +1076,26 @@ export default function FloorPlan() {
       const res = await fetch('/api/save-layout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gridSize, items }, null, 2),
+        body: JSON.stringify({ gridSize, items, comments }, null, 2),
       })
       if (!res.ok) throw new Error(await res.text())
       setStatus('Đã lưu ra src/layout.json')
     } catch {
       setStatus('Không lưu được — chỉ hoạt động khi chạy npm run dev')
     }
-  }, [items, gridSize])
+  }, [items, gridSize, comments])
 
   const handleLoadFile = useCallback(() => {
     pushHistory()
     const next = fileItems()
     setItems(next)
+    setComments(fileComments())
     if (!Array.isArray(fileLayout) && fileLayout.gridSize) setGridSize(fileLayout.gridSize)
     setSelectedIds([])
+    setOpenCommentId(null)
     setStatus('Đã tải lại nội dung từ src/layout.json')
     setView(computeFitViewBox(next))
   }, [pushHistory])
-
-  const handleClearAll = useCallback(() => {
-    if (items.length > 0 && !window.confirm('Xoá toàn bộ bản vẽ hiện tại?')) return
-    pushHistory()
-    setItems([])
-    setSelectedIds([])
-    setStatus('Đã xoá — bắt đầu lại từ trắng')
-    setView(DEFAULT_VIEW)
-  }, [items.length, pushHistory])
 
   // ===== Phím tắt =====
   useEffect(() => {
@@ -961,7 +1144,11 @@ export default function FloorPlan() {
         }
         return
       }
-      if (e.key === 'Escape') { setSelectedIds([]); return }
+      if (e.key === 'Escape') {
+        if (openCommentId) { setOpenCommentId(null); return }
+        setSelectedIds([])
+        return
+      }
       if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteIds(selectedIds); return }
       if (e.key.startsWith('Arrow')) {
         if (selectedIds.length === 0) return
@@ -969,11 +1156,18 @@ export default function FloorPlan() {
         const step = e.shiftKey ? gridSize : NUDGE_STEP
         const delta = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key]
         if (delta) moveSelection(delta[0], delta[1])
+        return
+      }
+      if (!mod && !e.altKey) {
+        const k = e.key.toLowerCase()
+        if (k === 'v') { setTool('move'); return }
+        if (k === 'h') { setTool('hand'); return }
+        if (k === 'c') { setTool('comment'); return }
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedIds, gridSize, undo, redo, copySelection, deleteIds, pasteClipboard, duplicateSelection, groupSelected, ungroupSelected, moveSelection, applyZoom])
+  }, [selectedIds, gridSize, openCommentId, undo, redo, copySelection, deleteIds, pasteClipboard, duplicateSelection, groupSelected, ungroupSelected, moveSelection, applyZoom])
 
   const viewBoxStr = `${view.x} ${view.y} ${view.w} ${view.h}`
   const selectedItems = items.filter((it) => selectedIds.includes(it.id))
@@ -982,17 +1176,37 @@ export default function FloorPlan() {
   const containers = items.filter((it) => it.category === 'container')
   const furniture = items.filter((it) => it.category !== 'container')
 
+  const canvasCursor = isPanning ? 'grabbing'
+    : (spaceHeld || tool === 'hand') ? 'grab'
+    : tool === 'comment' ? 'crosshair'
+    : 'default'
+
+  const worldToScreen = (wx, wy) => {
+    const svg = svgRef.current
+    if (!svg) return null
+    const rect = svg.getBoundingClientRect()
+    return { x: ((wx - view.x) / view.w) * rect.width, y: ((wy - view.y) / view.h) * rect.height }
+  }
+  const openComment = comments.find((c) => c.id === openCommentId) ?? null
+  const openCommentPos = openComment ? worldToScreen(openComment.x, openComment.y) : null
+
   return (
-    <div className="plan-shell">
+    <div className="plan-shell" data-theme={darkMode ? 'dark' : 'light'}>
       <div className="floating-topbar">
         <button type="button" onClick={handleSaveFile}>Lưu ra file</button>
         <button type="button" className="secondary" onClick={handleLoadFile}>Tải từ file</button>
-        <button type="button" className="secondary" onClick={handleClearAll}>Xoá hết</button>
         <GridSizeControl value={gridSize} onChange={setGridSize} />
+        <button
+          type="button" className="icon-btn theme-toggle"
+          title={darkMode ? 'Chuyển sang nền sáng' : 'Chuyển sang nền tối'}
+          onClick={() => setDarkMode((v) => !v)}
+        >
+          {darkMode ? <IconSun /> : <IconMoon />}
+        </button>
         {status && <span className="plan-status">{status}</span>}
       </div>
 
-      <ObjectToolbar onAdd={handleAdd} />
+      <ObjectToolbar theme={theme} onAdd={handleAdd} />
 
       <svg
         ref={svgRef} viewBox={viewBoxStr}
@@ -1000,10 +1214,11 @@ export default function FloorPlan() {
         onPointerDownCapture={handleCanvasPointerDownCapture}
         onPointerMove={handleCanvasPointerMove}
         onPointerUp={handleCanvasPointerUp}
-        style={{ cursor: isPanning ? 'grabbing' : spaceHeld ? 'grab' : undefined }}
+        style={{ cursor: canvasCursor === 'default' ? undefined : canvasCursor, background: theme.canvasBg }}
       >
         <GridBackground
           gridSize={gridSize}
+          theme={theme}
           onPointerDown={handleGridPointerDown}
           onPointerMove={handleGridPointerMove}
           onPointerUp={handleGridPointerUp}
@@ -1016,7 +1231,7 @@ export default function FloorPlan() {
             onPointerDown={handleBodyPointerDown(item.id)}
             onPointerMove={handleBodyPointerMove(item.id)}
             onPointerUp={handlePointerUp}
-            style={{ cursor: 'grab', touchAction: 'none' }}
+            style={{ cursor: canvasCursor === 'default' ? 'grab' : canvasCursor, touchAction: 'none' }}
             opacity={drag.current?.mode === 'move' && drag.current.startItems.some((s) => s.id === item.id) ? 0.65 : 1}
           >
             {item.type === 'room' ? (
@@ -1031,7 +1246,7 @@ export default function FloorPlan() {
             )}
             <FurnitureShape
               type={item.type} w={item.width} h={item.height}
-              color={item.category === 'container' ? WALL_COLOR : FURNITURE_COLOR}
+              color={item.category === 'container' ? theme.wall : FURNITURE_COLOR}
             />
           </g>
         ))}
@@ -1108,6 +1323,42 @@ export default function FloorPlan() {
           />
         )}
       </aside>
+
+      <div className="comment-layer">
+        {comments.map((c) => {
+          const pos = worldToScreen(c.x, c.y)
+          if (!pos) return null
+          return (
+            <CommentPin
+              key={c.id} x={pos.x} y={pos.y} active={c.id === openCommentId}
+              onClick={(e) => { e.stopPropagation(); setOpenCommentId(c.id) }}
+            />
+          )
+        })}
+        {openComment && openCommentPos && (
+          <CommentPopup
+            x={openCommentPos.x} y={openCommentPos.y} text={openComment.text}
+            onChangeText={(text) => setComments((prev) => prev.map((c) => (c.id === openComment.id ? { ...c, text } : c)))}
+            onClose={() => {
+              if (openComment.text.trim() === '') {
+                setComments((prev) => prev.filter((c) => c.id !== openComment.id))
+              }
+              setOpenCommentId(null)
+            }}
+            onDelete={() => {
+              setComments((prev) => prev.filter((c) => c.id !== openComment.id))
+              setOpenCommentId(null)
+            }}
+          />
+        )}
+      </div>
+
+      <ToolDock tool={tool} onChange={setTool} />
+
+      <button type="button" className="help-fab" title="Hướng dẫn sử dụng" onClick={() => setHelpOpen(true)}>
+        <IconHelp />
+      </button>
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
     </div>
   )
 }
