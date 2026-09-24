@@ -54,6 +54,32 @@ function cornerPoint(box, corner) {
   return { x, y }
 }
 
+// Vật thể xoay 90°/270° đổi chỗ chiều rộng/chiều cao trên màn hình dù width/height
+// lưu trong dữ liệu vẫn giữ nguyên (đó là kích thước "tự nhiên" của khối hình học,
+// dùng để vẽ chi tiết bên trong). Hai hàm dưới đây quy đổi qua lại giữa khung toạ độ
+// cục bộ (lưu trong item) và khung hình hộp bao trên màn hình (dùng để chọn/kéo góc).
+function toScreenBox(item) {
+  const rotation = item.rotation ?? 0
+  if (rotation % 180 === 90) {
+    const cx = item.x + item.width / 2
+    const cy = item.y + item.height / 2
+    return { x: cx - item.height / 2, y: cy - item.width / 2, width: item.height, height: item.width }
+  }
+  return { x: item.x, y: item.y, width: item.width, height: item.height }
+}
+
+function fromScreenBox(item, screenBox) {
+  const rotation = item.rotation ?? 0
+  if (rotation % 180 === 90) {
+    const cx = screenBox.x + screenBox.width / 2
+    const cy = screenBox.y + screenBox.height / 2
+    const width = screenBox.height
+    const height = screenBox.width
+    return { x: cx - width / 2, y: cy - height / 2, width, height }
+  }
+  return { x: screenBox.x, y: screenBox.y, width: screenBox.width, height: screenBox.height }
+}
+
 // Tính lại {x,y,width,height} khi kéo một góc tới vị trí con trỏ hiện tại (cur),
 // giữ nguyên cạnh đối diện với góc đang kéo.
 function resizeBox(box, corner, cur) {
@@ -206,7 +232,7 @@ function PropertiesPanel({ item, onChange, onRotate, onDelete }) {
         {field('height', 'Cao (mm)')}
       </div>
       <div className="prop-actions">
-        <button type="button" onClick={onRotate}>Xoay 90°</button>
+        <button type="button" onClick={onRotate}>Xoay 90° ({item.rotation ?? 0}°)</button>
         <button type="button" className="danger" onClick={onDelete}>Xoá</button>
       </div>
     </aside>
@@ -248,8 +274,13 @@ export default function FloorPlan() {
     if (!d || d.mode !== 'move' || d.id !== id) return
     const cur = toSvgPoint(e.clientX, e.clientY)
     const item = items.find((it) => it.id === id)
-    const nextX = clamp(snap(cur.x + d.dx), -MARGIN.left + 20, W + MARGIN.right - item.width - 20)
-    const nextY = clamp(snap(cur.y + d.dy), -MARGIN.top + 20, H + MARGIN.bottom - item.height - 20)
+    // Giới hạn theo hộp bao THỰC TẾ trên màn hình (đã tính xoay), rồi quy đổi
+    // ngược lại toạ độ cục bộ để x/y lưu lại vẫn đúng với hướng xoay hiện tại.
+    const screen = toScreenBox(item)
+    const offX = screen.x - item.x
+    const offY = screen.y - item.y
+    const nextX = clamp(snap(cur.x + d.dx), -MARGIN.left + 20 - offX, W + MARGIN.right - screen.width - 20 - offX)
+    const nextY = clamp(snap(cur.y + d.dy), -MARGIN.top + 20 - offY, H + MARGIN.bottom - screen.height - 20 - offY)
     updateItem(id, { x: nextX, y: nextY })
   }, [items, toSvgPoint, updateItem])
 
@@ -262,7 +293,7 @@ export default function FloorPlan() {
     e.stopPropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
     const item = items.find((it) => it.id === id)
-    drag.current = { mode: 'resize', id, corner, box: { x: item.x, y: item.y, width: item.width, height: item.height } }
+    drag.current = { mode: 'resize', id, corner, item }
     setSelectedId(id)
     setStatus('')
   }, [items])
@@ -271,7 +302,10 @@ export default function FloorPlan() {
     const d = drag.current
     if (!d || d.mode !== 'resize' || d.id !== id || d.corner !== corner) return
     const cur = toSvgPoint(e.clientX, e.clientY)
-    updateItem(id, resizeBox(d.box, corner, cur))
+    // Kéo góc luôn thao tác trên hộp bao MÀN HÌNH (trực quan với người dùng),
+    // sau đó quy đổi lại width/height/x/y cục bộ theo đúng hướng xoay hiện tại.
+    const newScreenBox = resizeBox(toScreenBox(d.item), corner, cur)
+    updateItem(id, fromScreenBox(d.item, newScreenBox))
   }, [toSvgPoint, updateItem])
 
   const handleAdd = useCallback((typeId) => {
@@ -285,6 +319,7 @@ export default function FloorPlan() {
       y: snap(H / 2 - type.height / 2 + cascade),
       width: type.width,
       height: type.height,
+      rotation: 0,
     }
     setItems((prev) => [...prev, newItem])
     setSelectedId(newItem.id)
@@ -294,7 +329,7 @@ export default function FloorPlan() {
   const handleRotate = useCallback(() => {
     if (!selectedId) return
     setItems((prev) => prev.map((it) => (
-      it.id === selectedId ? { ...it, width: it.height, height: it.width } : it
+      it.id === selectedId ? { ...it, rotation: ((it.rotation ?? 0) + 90) % 360 } : it
     )))
   }, [selectedId])
 
@@ -382,7 +417,7 @@ export default function FloorPlan() {
           {items.map((item) => (
             <g
               key={item.id}
-              transform={`translate(${item.x} ${item.y})`}
+              transform={`translate(${item.x} ${item.y}) rotate(${item.rotation ?? 0} ${item.width / 2} ${item.height / 2})`}
               onPointerDown={handleBodyPointerDown(item.id)}
               onPointerMove={handleBodyPointerMove(item.id)}
               onPointerUp={handlePointerUp}
@@ -394,18 +429,18 @@ export default function FloorPlan() {
             </g>
           ))}
 
-          {/* ===== Khung chọn + tay cầm kéo-giãn cho vật thể đang chọn ===== */}
+          {/* ===== Khung chọn + tay cầm kéo-giãn cho vật thể đang chọn (theo hộp bao màn hình) ===== */}
           {selectedItem && (
             <g pointerEvents="none">
               <rect
-                x={selectedItem.x} y={selectedItem.y}
-                width={selectedItem.width} height={selectedItem.height}
+                x={toScreenBox(selectedItem).x} y={toScreenBox(selectedItem).y}
+                width={toScreenBox(selectedItem).width} height={toScreenBox(selectedItem).height}
                 fill="none" stroke={SELECT_COLOR} strokeWidth={5} strokeDasharray="24 16"
               />
             </g>
           )}
           {selectedItem && CORNERS.map(({ id: corner, cursor }) => {
-            const p = cornerPoint(selectedItem, corner)
+            const p = cornerPoint(toScreenBox(selectedItem), corner)
             const s = HANDLE_SIZE
             return (
               <rect
