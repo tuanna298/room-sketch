@@ -13,8 +13,9 @@ import {
 // phòng hoặc đánh dấu vật cản cố định. Đường kích thước tự xuất hiện giữa một món
 // nội thất và cạnh container gần nhất. Có thể gộp nhiều vật thể thành một nhóm để
 // kéo/xoá cùng lúc, có khoá nhẹ khi kéo lại gần vật khác, và đầy đủ phím tắt quen
-// thuộc (Cmd/Ctrl+Z/A/C/X/V/D/G). Toàn bộ trạng thái tự lưu thẳng vào
-// src/layout.json trên đĩa (qua endpoint dev-server), không dùng localStorage.
+// thuộc (Cmd/Ctrl+Z/A/C/X/V/D/G). Toàn bộ trạng thái tự lưu: ở dev ghi thẳng
+// vào src/layout.json trên đĩa, ở bản deploy tĩnh (không có dev-server) tự
+// chuyển sang localStorage của người xem.
 
 const FURNITURE_COLOR = "#c98a4b";
 const DIM_COLOR = "#1f9d4d";
@@ -941,10 +942,16 @@ function HelpModal({ onClose }) {
   );
 }
 
-// Nguồn dữ liệu duy nhất giờ là src/layout.json trên đĩa — không còn bản chép
-// trong localStorage của trình duyệt. Mở lại trang sẽ đọc đúng nội dung file
-// tại thời điểm build/HMR (Vite tự nạp lại module JSON này khi file đổi).
-function loadInitialState() {
+// Ghi thẳng ra src/layout.json chỉ khả thi khi có dev-server (endpoint
+// /api/save-layout do plugin Vite cung cấp) — một bản deploy tĩnh như Vercel
+// không có gì để chạy plugin đó, và cũng không có ổ đĩa ghi được. Nên ở môi
+// trường dev, layout.json là nguồn dữ liệu chính; ở bản build/deploy tĩnh,
+// tự chuyển sang lưu trong localStorage của trình xem, và bundle của
+// layout.json chỉ còn là nội dung khởi tạo mặc định.
+const IS_DEV = import.meta.env.DEV;
+const PROJECT_STORAGE_KEY = "roomsketch-project-v1";
+
+function fileState() {
   if (Array.isArray(fileLayout)) {
     return { items: fileLayout, gridSize: DEFAULT_GRID, comments: [] };
   }
@@ -953,6 +960,25 @@ function loadInitialState() {
     gridSize: fileLayout.gridSize ?? DEFAULT_GRID,
     comments: fileLayout.comments ?? [],
   };
+}
+
+function loadInitialState() {
+  if (IS_DEV) return fileState();
+  try {
+    const raw = localStorage.getItem(PROJECT_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        items: parsed.items ?? [],
+        gridSize: parsed.gridSize ?? DEFAULT_GRID,
+        comments: parsed.comments ?? [],
+      };
+    }
+  } catch {
+    // localStorage không khả dụng (chế độ riêng tư, bị chặn...) — dùng bản
+    // đóng gói sẵn trong layout.json làm mặc định.
+  }
+  return fileState();
 }
 
 function loadInitialDarkMode() {
@@ -998,9 +1024,11 @@ export default function FloorPlan() {
     itemsRef.current = items;
   }, [items]);
 
-  // Tự lưu thẳng vào src/layout.json sau mỗi thay đổi (gộp lại theo
-  // AUTOSAVE_DEBOUNCE để một lượt kéo chỉ ghi file một lần), qua endpoint
-  // /api/save-layout do plugin Vite cung cấp — không còn localStorage.
+  // Tự lưu sau mỗi thay đổi (gộp lại theo AUTOSAVE_DEBOUNCE để một lượt kéo
+  // chỉ lưu một lần). Ở dev, ghi thẳng vào src/layout.json qua endpoint
+  // /api/save-layout do plugin Vite cung cấp. Ở bản deploy tĩnh (không có
+  // dev-server, vd. Vercel), tự chuyển sang lưu vào localStorage của người
+  // xem — không có ổ đĩa chung nào để ghi ra một file thực sự ở đó.
   useEffect(() => {
     if (!mountedRef.current) {
       mountedRef.current = true;
@@ -1009,11 +1037,21 @@ export default function FloorPlan() {
     setStatus("Đang lưu…");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
+      const payload = { gridSize, items, comments };
+      if (!IS_DEV) {
+        try {
+          localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(payload));
+          setStatus("Đã lưu (trên trình duyệt này)");
+        } catch {
+          setStatus("Không lưu được");
+        }
+        return;
+      }
       try {
         const res = await fetch("/api/save-layout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ gridSize, items, comments }, null, 2),
+          body: JSON.stringify(payload, null, 2),
         });
         if (!res.ok) throw new Error(await res.text());
         setStatus("Đã lưu");

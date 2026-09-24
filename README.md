@@ -123,17 +123,23 @@ thông thường của trình duyệt).
 
 ## Lưu trữ
 
-Mọi thay đổi (thêm/xoá/kéo/resize/xoay/nhóm/bình luận) **tự lưu thẳng vào
-`src/layout.json` trên đĩa** — không cần bấm nút nào, không dùng localStorage
-của trình duyệt nữa. Các thay đổi liên tiếp trong một lượt thao tác (vd. cả
-quá trình kéo một vật thể) được gộp lại (debounce ~600ms) thành một lần ghi
-file, qua endpoint `/api/save-layout` do một plugin của Vite cung cấp (xem
-`vite.config.js`). Trạng thái "Đang lưu…" / "Đã lưu" hiện ở thanh trên.
+Mọi thay đổi (thêm/xoá/kéo/resize/xoay/nhóm/bình luận) **tự lưu** — không cần
+bấm nút nào — nhưng lưu vào đâu tuỳ vào môi trường chạy, vì `npm run dev` là
+nơi duy nhất có một dev-server ghi được ra đĩa:
 
-Cơ chế này chỉ hoạt động khi chạy `npm run dev` (không có tác dụng trên bản
-build tĩnh `npm run build` — khi đó thay đổi chỉ tồn tại trong phiên hiện
-tại). Mở lại trang sẽ đọc đúng nội dung `src/layout.json` tại thời điểm đó;
-nếu file đang rỗng, trang bắt đầu trắng hoàn toàn.
+- **Chạy `npm run dev` (máy cá nhân)**: ghi thẳng vào `src/layout.json` qua
+  endpoint `/api/save-layout` do một plugin của Vite cung cấp (xem
+  `vite.config.js`). Trạng thái hiện "Đã lưu". Mở lại trang sẽ đọc đúng nội
+  dung file tại thời điểm đó.
+- **Bản deploy tĩnh (`npm run build`, Vercel...)**: không có dev-server hay
+  ổ đĩa chung nào để ghi file thật, nên tự chuyển sang lưu trong
+  **localStorage của trình duyệt người xem**. Trạng thái hiện "Đã lưu (trên
+  trình duyệt này)". Mỗi người xem có bản lưu riêng trên máy họ; `layout.json`
+  lúc này chỉ còn là nội dung khởi tạo mặc định khi trình duyệt đó lần đầu ghé
+  (hoặc xoá localStorage).
+
+Cả hai đường đều gộp các thay đổi liên tiếp trong một lượt thao tác (vd. cả
+quá trình kéo một vật thể) theo debounce ~600ms thành một lần lưu.
 
 ## Cấu trúc
 
