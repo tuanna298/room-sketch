@@ -67,6 +67,21 @@ ra xa hơn ngưỡng đó.
 Chỉnh lại kích cỡ ô ở khung "Ô lưới" trên thanh công cụ — áp dụng ngay cho cả
 hiển thị lẫn mức làm tròn khi kéo vật thể tự do (không khoá theo vật khác).
 
+## Di chuyển & zoom bằng chuột/trackpad (kiểu Figma)
+
+- **Cuộn** (lăn chuột, hoặc vuốt hai ngón trên trackpad) — pan toàn canvas.
+- **Ctrl/Cmd + cuộn**, hoặc **pinch hai ngón** trên trackpad — zoom quanh đúng
+  vị trí con trỏ.
+- **Giữ phím Space rồi kéo**, hoặc **kéo bằng nút chuột giữa** — pan bằng tay
+  (con trỏ đổi thành bàn tay), hoạt động xuyên qua mọi vật thể mà không làm
+  chúng bị chọn hay di chuyển.
+- Kéo-thả bình thường (không giữ gì) trên nền trống vẫn là **marquee-select**
+  như trước — không xung đột với việc pan.
+
+Khung nhìn không còn tự "nhảy" theo mỗi lần thêm/kéo/resize nữa — chỉ tự co
+theo toàn bộ nội dung khi tải trang, Tải từ file, Xoá hết, hoặc Undo/Redo, để
+không phá vị trí pan/zoom người dùng vừa tự chỉnh.
+
 ## Phím tắt
 
 | Phím | Chức năng |
@@ -78,6 +93,9 @@ hiển thị lẫn mức làm tròn khi kéo vật thể tự do (không khoá t
 | Cmd/Ctrl + D | Nhân đôi lựa chọn |
 | Cmd/Ctrl + G | Nhóm lại |
 | Cmd/Ctrl + Shift + G | Rã nhóm |
+| Cmd/Ctrl + '+' / '-' | Zoom vào / ra (quanh tâm khung nhìn) |
+| Shift + 1 | Zoom vừa khít toàn bộ nội dung |
+| Shift + 2 | Zoom vừa khít lựa chọn hiện tại |
 | Delete / Backspace | Xoá lựa chọn |
 | Mũi tên | Di chuyển 10mm (giữ Shift: theo ô lưới) |
 | Escape | Bỏ chọn |
@@ -105,10 +123,10 @@ với autosave ở trên:
 
 ## Cấu trúc
 
-- `src/FloorPlan.jsx` — canvas SVG toàn màn hình (khung nhìn tự co theo nội
-  dung, đóng băng khi đang kéo), toolbar container/nội thất, chọn đơn/nhóm/
-  marquee, kéo-di chuyển-cả-cụm, resize tỉ lệ, khoá nhẹ, đường kích thước tự
-  động, undo/redo, clipboard, và toàn bộ phím tắt.
+- `src/FloorPlan.jsx` — canvas SVG toàn màn hình (pan/zoom bằng chuột-trackpad,
+  khung nhìn tự co theo nội dung khi tải/xoá/undo), toolbar container/nội
+  thất, chọn đơn/nhóm/marquee, kéo-di chuyển-cả-cụm, resize tỉ lệ, khoá nhẹ,
+  đường kích thước tự động, undo/redo, clipboard, và toàn bộ phím tắt.
 - `src/furniture.jsx` — danh mục loại container (`CONTAINER_TYPES`) và nội
   thất (`FURNITURE_TYPES`), cùng hàm vẽ hình dạng theo toạ độ cục bộ
   (0,0) → (width,height) cho từng loại.

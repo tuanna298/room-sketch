@@ -23,6 +23,14 @@ const FIT_PADDING = 600
 const FIT_MIN_W = 3000
 const FIT_MIN_H = 2400
 
+// Thao tác chuột/trackpad kiểu Figma: cuộn để pan, Ctrl/Cmd+cuộn (hoặc pinch trên
+// trackpad — trình duyệt tự báo về dưới dạng wheel + ctrlKey) để zoom quanh vị trí
+// con trỏ, giữ Space hoặc kéo bằng nút chuột giữa để pan bằng tay.
+const MIN_VIEW_W = 300 // mm — zoom vào gần nhất
+const MAX_VIEW_W = 40000 // mm — zoom ra xa nhất
+const ZOOM_WHEEL_SENSITIVITY = 0.0022
+const ZOOM_KEY_FACTOR = 0.85
+
 const DEFAULT_GRID = 400 // mm — kích cỡ mỗi ô lưới, ánh xạ theo ô gạch thực tế
 const MIN_GRID = 50
 const MAX_GRID = 2000
@@ -461,11 +469,15 @@ export default function FloorPlan() {
   const [guides, setGuides] = useState({ x: null, y: null })
   const [marquee, setMarquee] = useState(null)
   const [view, setView] = useState(() => computeFitViewBox(initialState.items))
+  const [spaceHeld, setSpaceHeld] = useState(false)
+  const [isPanning, setIsPanning] = useState(false)
   const svgRef = useRef(null)
   const drag = useRef(null)
   const marqueeDrag = useRef(null)
+  const panDrag = useRef(null)
   const addCount = useRef(0)
   const itemsRef = useRef(items)
+  const viewRef = useRef(view)
   const clipboard = useRef([])
   const past = useRef([])
   const future = useRef([])
@@ -478,6 +490,100 @@ export default function FloorPlan() {
       // bỏ qua nếu trình duyệt chặn localStorage
     }
   }, [items, gridSize])
+
+  useEffect(() => { viewRef.current = view }, [view])
+
+  // Giữ Space để pan bằng tay (con trỏ đổi thành bàn tay), giống Figma. Bỏ qua khi
+  // đang gõ trong một ô nhập để không chặn phím cách bình thường.
+  useEffect(() => {
+    function down(e) {
+      if (e.code !== 'Space' || e.repeat) return
+      const tag = document.activeElement?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      e.preventDefault()
+      setSpaceHeld(true)
+    }
+    function up(e) {
+      if (e.code === 'Space') setSpaceHeld(false)
+    }
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+    }
+  }, [])
+
+  const applyZoom = useCallback((pivotX, pivotY, factor) => {
+    setView((v) => {
+      const newW = clamp(v.w * factor, MIN_VIEW_W, MAX_VIEW_W)
+      const applied = newW / v.w
+      const newH = v.h * applied
+      return {
+        x: pivotX - (pivotX - v.x) * applied,
+        y: pivotY - (pivotY - v.y) * applied,
+        w: newW,
+        h: newH,
+      }
+    })
+  }, [])
+
+  // Cuộn để pan (kéo hai ngón trên trackpad, hoặc lăn chuột); giữ Ctrl/Cmd để zoom
+  // quanh vị trí con trỏ — trình duyệt tự báo cử chỉ pinch trên trackpad thành sự
+  // kiện wheel kèm ctrlKey nên không cần xử lý riêng.
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return undefined
+    function onWheel(e) {
+      e.preventDefault()
+      const rect = svg.getBoundingClientRect()
+      const v = viewRef.current
+      if (e.ctrlKey || e.metaKey) {
+        const pivotX = v.x + ((e.clientX - rect.left) / rect.width) * v.w
+        const pivotY = v.y + ((e.clientY - rect.top) / rect.height) * v.h
+        const factor = clamp(1 + e.deltaY * ZOOM_WHEEL_SENSITIVITY, 0.82, 1.18)
+        applyZoom(pivotX, pivotY, factor)
+        return
+      }
+      const dx = (e.deltaX / rect.width) * v.w
+      const dy = (e.deltaY / rect.height) * v.h
+      setView((cur) => ({ ...cur, x: cur.x + dx, y: cur.y + dy }))
+    }
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', onWheel)
+  }, [applyZoom])
+
+  // Pan bằng tay: giữ Space rồi kéo, hoặc kéo bằng nút chuột giữa — bắt ở pha
+  // capture trên toàn canvas để "đè" trước mọi thao tác chọn/di chuyển vật thể ở
+  // bên dưới, y hệt Hand tool của Figma.
+  const handleCanvasPointerDownCapture = useCallback((e) => {
+    if (!(spaceHeld || e.button === 1)) return
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    panDrag.current = { startClient: { x: e.clientX, y: e.clientY }, startView: { ...viewRef.current } }
+    setIsPanning(true)
+  }, [spaceHeld])
+
+  const handleCanvasPointerMove = useCallback((e) => {
+    const p = panDrag.current
+    if (!p) return
+    const rect = svgRef.current.getBoundingClientRect()
+    const dxPx = e.clientX - p.startClient.x
+    const dyPx = e.clientY - p.startClient.y
+    setView({
+      ...p.startView,
+      x: p.startView.x - (dxPx / rect.width) * p.startView.w,
+      y: p.startView.y - (dyPx / rect.height) * p.startView.h,
+    })
+  }, [])
+
+  const handleCanvasPointerUp = useCallback((e) => {
+    if (!panDrag.current) return
+    e.currentTarget.releasePointerCapture(e.pointerId)
+    panDrag.current = null
+    setIsPanning(false)
+  }, [])
 
   const pushHistory = useCallback(() => {
     past.current = [...past.current.slice(-HISTORY_LIMIT + 1), itemsRef.current]
@@ -585,10 +691,8 @@ export default function FloorPlan() {
 
   const handlePointerUp = useCallback((e) => {
     e.currentTarget.releasePointerCapture(e.pointerId)
-    const wasDragging = drag.current !== null
     drag.current = null
     setGuides({ x: null, y: null })
-    if (wasDragging) setView(computeFitViewBox(itemsRef.current))
   }, [])
 
   // ===== Kéo góc: co giãn hộp bao của TOÀN BỘ lựa chọn hiện tại (1 vật hoặc cả nhóm) =====
@@ -685,7 +789,6 @@ export default function FloorPlan() {
     setItems(next)
     setSelectedIds([newItem.id])
     setStatus('')
-    setView(computeFitViewBox(next))
   }, [items, centerOfView, pushHistory])
 
   const rotateIds = useCallback((ids) => {
@@ -701,7 +804,6 @@ export default function FloorPlan() {
     const next = items.filter((it) => !ids.includes(it.id))
     setItems(next)
     setSelectedIds([])
-    setView(computeFitViewBox(next))
   }, [items, pushHistory])
 
   const groupSelected = useCallback(() => {
@@ -754,7 +856,6 @@ export default function FloorPlan() {
     const next = [...items, ...pasted]
     setItems(next)
     setSelectedIds(pasted.map((it) => it.id))
-    setView(computeFitViewBox(next))
     setStatus(`Đã dán ${pasted.length} đối tượng`)
   }, [items, gridSize, pushHistory])
 
@@ -776,7 +877,6 @@ export default function FloorPlan() {
     const next = [...items, ...dup]
     setItems(next)
     setSelectedIds(dup.map((it) => it.id))
-    setView(computeFitViewBox(next))
     setStatus(`Đã nhân đôi ${dup.length} đối tượng`)
   }, [items, selectedIds, gridSize, pushHistory])
 
@@ -837,6 +937,30 @@ export default function FloorPlan() {
         if (e.shiftKey) ungroupSelected(); else groupSelected()
         return
       }
+      if (mod && (e.key === '=' || e.key === '+')) {
+        e.preventDefault()
+        const v = viewRef.current
+        applyZoom(v.x + v.w / 2, v.y + v.h / 2, ZOOM_KEY_FACTOR)
+        return
+      }
+      if (mod && e.key === '-') {
+        e.preventDefault()
+        const v = viewRef.current
+        applyZoom(v.x + v.w / 2, v.y + v.h / 2, 1 / ZOOM_KEY_FACTOR)
+        return
+      }
+      if (e.shiftKey && e.key === '1') {
+        e.preventDefault()
+        setView(computeFitViewBox(itemsRef.current))
+        return
+      }
+      if (e.shiftKey && e.key === '2') {
+        e.preventDefault()
+        if (selectedIds.length > 0) {
+          setView(computeFitViewBox(itemsRef.current.filter((it) => selectedIds.includes(it.id))))
+        }
+        return
+      }
       if (e.key === 'Escape') { setSelectedIds([]); return }
       if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteIds(selectedIds); return }
       if (e.key.startsWith('Arrow')) {
@@ -849,7 +973,7 @@ export default function FloorPlan() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedIds, gridSize, undo, redo, copySelection, deleteIds, pasteClipboard, duplicateSelection, groupSelected, ungroupSelected, moveSelection])
+  }, [selectedIds, gridSize, undo, redo, copySelection, deleteIds, pasteClipboard, duplicateSelection, groupSelected, ungroupSelected, moveSelection, applyZoom])
 
   const viewBoxStr = `${view.x} ${view.y} ${view.w} ${view.h}`
   const selectedItems = items.filter((it) => selectedIds.includes(it.id))
@@ -873,6 +997,10 @@ export default function FloorPlan() {
       <svg
         ref={svgRef} viewBox={viewBoxStr}
         className="floor-canvas"
+        onPointerDownCapture={handleCanvasPointerDownCapture}
+        onPointerMove={handleCanvasPointerMove}
+        onPointerUp={handleCanvasPointerUp}
+        style={{ cursor: isPanning ? 'grabbing' : spaceHeld ? 'grab' : undefined }}
       >
         <GridBackground
           gridSize={gridSize}

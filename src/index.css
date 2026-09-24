@@ -31,6 +31,8 @@ body,
   height: 100%;
   display: block;
   background: #050505;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .floating-topbar {
