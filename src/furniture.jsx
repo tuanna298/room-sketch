@@ -5,6 +5,7 @@
 // trong bảng thuộc tính.
 
 export const MIN_SIZE = 100 // mm — kích thước nhỏ nhất khi thu nhỏ một đối tượng
+const CONTAINER_STROKE = 20 // mm — viền container cố định, không phình theo kích thước
 
 export const FURNITURE_TYPES = [
   { id: 'bed', label: 'Giường', width: 1600, height: 2000 },
@@ -16,6 +17,10 @@ export const FURNITURE_TYPES = [
   { id: 'tv-cabinet', label: 'Kệ tivi', width: 1200, height: 400 },
   { id: 'sink', label: 'Bồn rửa', width: 600, height: 500 },
   { id: 'toilet', label: 'Bồn cầu', width: 400, height: 600 },
+  { id: 'plant', label: 'Chậu cây', width: 400, height: 400 },
+  { id: 'drawer', label: 'Hộc tủ', width: 800, height: 450 },
+  { id: 'bookshelf', label: 'Kệ sách', width: 900, height: 350 },
+  { id: 'mirror', label: 'Gương', width: 700, height: 60 },
 ]
 
 export function furnitureType(id) {
@@ -41,8 +46,15 @@ export function typeOf(category, id) {
 
 // Vẽ hình dạng của một loại nội thất trong hệ toạ độ cục bộ 0..w, 0..h.
 // Mọi tỉ lệ bên trong đều tính theo w/h nên co giãn theo đúng kích thước hiện tại.
+// Riêng container dùng viền dày cố định (CONTAINER_STROKE) thay vì phình theo
+// kích thước — một căn phòng 6m không nên có tường dày gấp đôi phòng 3m.
 export function FurnitureShape({ type, w, h, color }) {
-  const common = { stroke: color, strokeWidth: Math.max(4, Math.min(w, h) * 0.02), fill: 'none' }
+  const isContainer = type === 'room' || type === 'column'
+  const common = {
+    stroke: color,
+    strokeWidth: isContainer ? CONTAINER_STROKE : Math.max(4, Math.min(w, h) * 0.02),
+    fill: 'none',
+  }
 
   switch (type) {
     case 'bed': {
@@ -123,6 +135,61 @@ export function FurnitureShape({ type, w, h, color }) {
         </g>
       )
     }
+    case 'plant': {
+      const r = Math.min(w, h) / 2
+      const cx = w / 2
+      const cy = h / 2
+      const leaf = (angle) => {
+        const rad = (angle * Math.PI) / 180
+        const x2 = cx + Math.cos(rad) * r * 0.85
+        const y2 = cy + Math.sin(rad) * r * 0.85
+        return <line key={angle} x1={cx} y1={cy} x2={x2} y2={y2} />
+      }
+      return (
+        <g {...common}>
+          <ellipse cx={cx} cy={cy} rx={r} ry={r} />
+          <ellipse cx={cx} cy={cy} rx={r * 0.55} ry={r * 0.55} />
+          {[-140, -90, -40, -160].map(leaf)}
+        </g>
+      )
+    }
+    case 'drawer': {
+      const rows = 3
+      const lines = []
+      for (let i = 1; i < rows; i += 1) {
+        const y = (h * i) / rows
+        lines.push(<line key={i} x1={0} y1={y} x2={w} y2={y} />)
+      }
+      const handles = []
+      for (let i = 0; i < rows; i += 1) {
+        const cy = (h * (i + 0.5)) / rows
+        handles.push(<line key={`h${i}`} x1={w * 0.4} y1={cy} x2={w * 0.6} y2={cy} />)
+      }
+      return (
+        <g {...common}>
+          <rect x={0} y={0} width={w} height={h} />
+          {lines}
+          {handles}
+        </g>
+      )
+    }
+    case 'bookshelf':
+      return (
+        <g {...common}>
+          <rect x={0} y={0} width={w} height={h} />
+          <line x1={w / 3} y1={0} x2={w / 3} y2={h} />
+          <line x1={(2 * w) / 3} y1={0} x2={(2 * w) / 3} y2={h} />
+          <line x1={0} y1={h / 2} x2={w} y2={h / 2} />
+        </g>
+      )
+    case 'mirror':
+      return (
+        <g {...common}>
+          <rect x={0} y={0} width={w} height={h} />
+          <line x1={0} y1={0} x2={w} y2={h} />
+          <line x1={0} y1={h} x2={w} y2={0} />
+        </g>
+      )
     case 'room':
       return <rect {...common} x={0} y={0} width={w} height={h} />
     case 'column':

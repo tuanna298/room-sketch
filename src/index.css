@@ -14,61 +14,46 @@ body,
   margin: 0;
   background: #050505;
   color: #d7d7d7;
+  overflow: hidden;
 }
 
-.page {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-}
-
-.page-header {
-  padding: 28px 24px 12px;
-  text-align: center;
-}
-
-.page-header h1 {
-  margin: 0 0 8px;
-  font-size: 28px;
-  font-weight: 600;
-  color: #f2f2f2;
-}
-
-.page-header p {
-  margin: 0 auto;
-  max-width: 640px;
-  color: #8a8a8a;
-  font-size: 14px;
-}
-
-.plan-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 16px 4px;
-  min-height: 0;
-}
-
+/* ===== Khung tổng: canvas trải kín màn hình, các panel nổi phía trên (kiểu Figma) ===== */
 .plan-shell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.floor-canvas {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  min-height: 0;
+  display: block;
+  background: #050505;
 }
 
-.plan-toolbar {
+.floating-topbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
+  max-width: calc(100vw - 360px);
+  padding: 10px 14px;
+  background: rgba(18, 18, 18, 0.88);
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-.plan-toolbar button {
+.floating-topbar button {
   font: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -78,57 +63,68 @@ body,
   background: #123018;
   color: #e6ffe9;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.plan-toolbar button:hover {
+.floating-topbar button:hover {
   background: #17421f;
 }
 
-.plan-toolbar button.secondary {
+.floating-topbar button.secondary {
   border-color: #3a3a3a;
   background: #1a1a1a;
   color: #b8b8b8;
 }
 
-.plan-toolbar button.secondary:hover {
+.floating-topbar button.secondary:hover {
   background: #232323;
 }
 
 .plan-status {
   font-size: 13px;
   color: #8a8a8a;
+  white-space: nowrap;
 }
 
-.editor-body {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  max-width: 1400px;
-  display: flex;
-  gap: 14px;
-  padding: 0 16px 16px;
-  align-items: stretch;
+.grid-size-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9a9a9a;
+  padding-left: 8px;
+  border-left: 1px solid #333;
 }
 
-.editor-body svg {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  max-height: 74vh;
-  background: #050505;
-  border: 1px solid #1e1e1e;
-  border-radius: 8px;
+.grid-size-field input {
+  width: 64px;
+  font: inherit;
+  font-size: 13px;
+  color: #f2f2f2;
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  padding: 5px 6px;
 }
 
+/* ===== Toolbar nội thất: panel nổi bên trái ===== */
 .furniture-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 16px;
+  z-index: 20;
+  width: 108px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  width: 108px;
-  flex-shrink: 0;
   overflow-y: auto;
-  max-height: 74vh;
-  padding-right: 2px;
+  padding: 12px 8px;
+  background: rgba(18, 18, 18, 0.88);
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .toolbar-section-label {
@@ -156,6 +152,7 @@ body,
   font: inherit;
   font-size: 11px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .furniture-btn:hover {
@@ -168,20 +165,28 @@ body,
   height: 40px;
 }
 
+/* ===== Bảng thuộc tính: panel nổi bên phải ===== */
 .properties-panel {
-  width: 220px;
-  flex-shrink: 0;
-  background: #101010;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+  width: 240px;
+  background: rgba(16, 16, 16, 0.9);
   border: 1px solid #1e1e1e;
-  border-radius: 8px;
-  padding: 14px;
+  border-radius: 12px;
+  padding: 16px;
   font-size: 13px;
   color: #c9c9c9;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-.properties-panel.empty {
+.properties-empty {
+  margin: 0;
   color: #7a7a7a;
   line-height: 1.5;
+  font-size: 13px;
 }
 
 .properties-panel h3 {
@@ -215,14 +220,22 @@ body,
   width: 100%;
 }
 
+.prop-readonly {
+  font-size: 13px;
+  color: #d7d7d7;
+  padding: 6px 0 2px;
+}
+
 .prop-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 16px;
 }
 
 .prop-actions button {
   flex: 1;
+  min-width: 90px;
   font: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -247,37 +260,14 @@ body,
   background: #2a1414;
 }
 
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 20px;
-  padding: 14px 16px 24px;
-  font-size: 13px;
-  color: #9a9a9a;
-}
-
-.legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.swatch {
-  width: 22px;
-  height: 3px;
-  display: inline-block;
-  border-radius: 2px;
-}
-
-.swatch.wall {
-  background: #e8e8e8;
-}
-
-.swatch.fixture {
-  background: #c98a4b;
-}
-
-.swatch.dim {
-  background: #39d353;
+@media (max-width: 720px) {
+  .furniture-toolbar {
+    width: 84px;
+  }
+  .properties-panel {
+    width: 200px;
+  }
+  .floating-topbar {
+    max-width: calc(100vw - 280px);
+  }
 }
