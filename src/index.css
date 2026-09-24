@@ -131,6 +131,18 @@ body,
   padding-right: 2px;
 }
 
+.toolbar-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6a6a6a;
+  padding: 8px 2px 2px;
+}
+
+.toolbar-section-label:first-child {
+  padding-top: 0;
+}
+
 .furniture-btn {
   display: flex;
   flex-direction: column;

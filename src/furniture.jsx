@@ -22,6 +22,23 @@ export function furnitureType(id) {
   return FURNITURE_TYPES.find((t) => t.id === id) ?? FURNITURE_TYPES[0]
 }
 
+// "Container" là khối hình học cố định (tường bao căn phòng, cột, hộp kỹ thuật...).
+// Không đại diện cho một vật thể cụ thể nào — cùng một hình chữ nhật, kéo lớn ra
+// thì dùng làm ranh giới căn phòng, thu nhỏ lại thì dùng làm cột hoặc hộp gen.
+// Đây là đối tượng duy nhất được dùng làm mốc cho các đường kích thước tự động.
+export const CONTAINER_TYPES = [
+  { id: 'room', label: 'Phòng / Tường', width: 3000, height: 3000, category: 'container' },
+  { id: 'column', label: 'Cột', width: 300, height: 300, category: 'container' },
+]
+
+export function containerType(id) {
+  return CONTAINER_TYPES.find((t) => t.id === id) ?? CONTAINER_TYPES[0]
+}
+
+export function typeOf(category, id) {
+  return category === 'container' ? containerType(id) : furnitureType(id)
+}
+
 // Vẽ hình dạng của một loại nội thất trong hệ toạ độ cục bộ 0..w, 0..h.
 // Mọi tỉ lệ bên trong đều tính theo w/h nên co giãn theo đúng kích thước hiện tại.
 export function FurnitureShape({ type, w, h, color }) {
@@ -106,6 +123,16 @@ export function FurnitureShape({ type, w, h, color }) {
         </g>
       )
     }
+    case 'room':
+      return <rect {...common} x={0} y={0} width={w} height={h} />
+    case 'column':
+      return (
+        <g {...common}>
+          <rect x={0} y={0} width={w} height={h} fill={color} opacity={0.35} />
+          <line x1={0} y1={0} x2={w} y2={h} />
+          <line x1={w} y1={0} x2={0} y2={h} />
+        </g>
+      )
     default:
       return <rect {...common} x={0} y={0} width={w} height={h} />
   }

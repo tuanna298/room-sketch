@@ -4,12 +4,13 @@ function App() {
   return (
     <div className="page">
       <header className="page-header">
-        <h1>Mặt bằng khu phụ (WC)</h1>
+        <h1>Trình vẽ mặt bằng</h1>
         <p>
-          Số hoá lại từ bản phác thảo gốc, đơn vị milimét. Nền kẻ ô: ô nhỏ 100mm,
-          ô đậm 500mm. Thêm nội thất từ toolbar bên trái, kéo để di chuyển, kéo góc
-          để đổi kích cỡ hoặc chỉnh số liệu ở bảng thuộc tính bên phải, rồi bấm
-          "Lưu thay đổi" để ghi đè vào file.
+          Bắt đầu bằng cách thêm một khối "Phòng / Tường" từ toolbar rồi kéo-giãn
+          thành ranh giới căn phòng, sau đó thêm nội thất. Đường kích thước tự hiện
+          ra khi một món đồ đặt gần cạnh tường/cột; kéo lại gần vật khác sẽ tự khoá
+          thẳng hàng. Mọi thay đổi tự lưu vào trình duyệt này — "Lưu ra file" chỉ để
+          xuất một bản chụp ra src/layout.json.
         </p>
       </header>
 
@@ -18,9 +19,9 @@ function App() {
       </main>
 
       <footer className="legend">
-        <span><i className="swatch wall" /> Tường</span>
+        <span><i className="swatch wall" /> Container (tường/cột)</span>
         <span><i className="swatch fixture" /> Nội thất</span>
-        <span><i className="swatch dim" /> Đường kích thước (mm)</span>
+        <span><i className="swatch dim" /> Kích thước tự động (mm)</span>
       </footer>
     </div>
   )
