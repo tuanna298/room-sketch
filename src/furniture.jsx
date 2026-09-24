@@ -7,6 +7,7 @@
 export const MIN_SIZE = 100 // mm — kích thước nhỏ nhất khi thu nhỏ một đối tượng
 const CONTAINER_STROKE = 20 // mm — viền container cố định, không phình theo kích thước
 const FURNITURE_STROKE = 10 // mm — viền nội thất cố định, đồng bộ giữa mọi loại
+const MEASURE_COLOR = '#1f9d4d' // đường đo kích thước luôn màu xanh lá, không đổi theo theme
 
 export const FURNITURE_TYPES = [
   { id: 'bed', label: 'Giường', width: 1600, height: 2000 },
@@ -22,6 +23,7 @@ export const FURNITURE_TYPES = [
   { id: 'drawer', label: 'Hộc tủ', width: 800, height: 450 },
   { id: 'bookshelf', label: 'Kệ sách', width: 900, height: 350 },
   { id: 'mirror', label: 'Gương', width: 700, height: 60 },
+  { id: 'measure', label: 'Đo kích thước', width: 1000, height: 100 },
 ]
 
 export function furnitureType(id) {
@@ -191,6 +193,33 @@ export function FurnitureShape({ type, w, h, color }) {
           <line x1={0} y1={h} x2={w} y2={0} />
         </g>
       )
+    case 'measure': {
+      // Đường đo kích thước: mũi tên 2 đầu dọc theo chiều rộng khối, text ở giữa
+      // luôn hiển thị đúng chiều dài hiện tại (w, mm) — tự cập nhật khi kéo resize.
+      const midY = h / 2
+      const arrow = Math.min(w * 0.15, Math.max(h * 0.5, 18))
+      const strokeW = Math.max(4, h * 0.1)
+      return (
+        <g stroke={MEASURE_COLOR} fill={MEASURE_COLOR}>
+          <line x1={0} y1={midY} x2={w} y2={midY} strokeWidth={strokeW} />
+          <polygon points={`0,${midY} ${arrow},${midY - arrow * 0.5} ${arrow},${midY + arrow * 0.5}`} />
+          <polygon
+            points={`${w},${midY} ${w - arrow},${midY - arrow * 0.5} ${w - arrow},${midY + arrow * 0.5}`}
+          />
+          <text
+            x={w / 2}
+            y={midY - h * 0.18}
+            fill={MEASURE_COLOR}
+            stroke="none"
+            fontSize={Math.max(24, h * 0.55)}
+            fontFamily="'JetBrains Mono', ui-monospace, monospace"
+            textAnchor="middle"
+          >
+            {Math.round(w)}
+          </text>
+        </g>
+      )
+    }
     case 'room':
       return <rect {...common} x={0} y={0} width={w} height={h} />
     case 'column':

@@ -29,10 +29,10 @@ chọn đồ đạc bên trong sẽ không vô tình "nuốt" luôn cả bức t
 ## Toolbar nội thất
 
 Mục "Nội thất" liệt kê Giường, Bàn, Ghế, Cửa, Tủ, Sofa, Kệ tivi, Bồn rửa, Bồn
-cầu, Chậu cây, Hộc tủ, Kệ sách, Gương... Mỗi loại chỉ là một khối hình học chữ
-nhật (kèm vài chi tiết trang trí vẽ theo tỉ lệ) với kích thước khởi tạo —
-không có kích thước nào bị đóng cứng. Bấm một loại để thêm vào giữa khung nhìn
-hiện tại, sau đó:
+cầu, Chậu cây, Hộc tủ, Kệ sách, Gương, Đo kích thước... Mỗi loại chỉ là một
+khối hình học chữ nhật (kèm vài chi tiết trang trí vẽ theo tỉ lệ) với kích
+thước khởi tạo — không có kích thước nào bị đóng cứng. Bấm một loại để thêm
+vào giữa khung nhìn hiện tại, sau đó:
 
 - **Kéo phần thân** để di chuyển — khi cạnh hoặc tâm của vật thể đến gần cạnh
   hay tâm một vật khác (container hoặc nội thất khác) trong khoảng 60mm, nó sẽ
@@ -53,15 +53,14 @@ hiện tại, sau đó:
 - Với từ 2 vật trở lên đang chọn (nhóm hay không), 4 tay cầm ở góc co-giãn tỉ
   lệ TOÀN BỘ lựa chọn cùng lúc, giữ đúng vị trí tương đối giữa các món.
 
-## Đường kích thước tự động
+## Đo kích thước
 
-Không còn đường kích thước vẽ sẵn nào. Với mỗi món nội thất, nếu nó nằm gần
-cạnh một container (khoảng cách ≤ 150mm, kể cả đúng 0mm khi áp sát tường) và
-còn chồng chiều còn lại lên container đó, một đường kích thước xanh dạng
-mũi tên đôi "↕"/"↔" kèm số đo (mm) sẽ tự hiện ra — không vẽ ngay trong khe hở
-(khe đó có lúc gần như bằng 0, khó đọc) mà đặt cố định cách mặt tường 150mm,
-nối tới mặt tường bằng một đường nét đứt mảnh. Biến mất ngay khi kéo món đồ
-ra xa hơn ngưỡng 150mm.
+Không có đường kích thước nào tự vẽ sẵn. Cần ghi chú khoảng cách ở đâu thì tự
+thêm item **"Đo kích thước"** trong toolbar Nội thất — một đường mũi tên 2
+đầu màu xanh lá, ở giữa là text số đo (mm), text này **tự tính theo chiều dài
+hiện tại của đường** (chính là "Rộng" trong bảng thuộc tính), không cần gõ
+tay. Kéo-thả, resize, xoay, xoá như mọi món nội thất khác — kéo 2 tay cầm ở
+hai đầu (góc trái/phải) để chỉnh đúng độ dài cần đo.
 
 ## Ô lưới nền
 

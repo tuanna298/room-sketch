@@ -1,5 +1,36 @@
 {
   "gridSize": 100,
-  "items": [],
+  "items": [
+    {
+      "id": "room-mufcpc1c-29ucr",
+      "category": "container",
+      "type": "room",
+      "x": 180,
+      "y": -320,
+      "width": 3000,
+      "height": 3000,
+      "rotation": 0
+    },
+    {
+      "id": "bed-mufcpdl3-n8o3w",
+      "category": "furniture",
+      "type": "bed",
+      "x": 1500,
+      "y": 400,
+      "width": 1600,
+      "height": 2000,
+      "rotation": 0
+    },
+    {
+      "id": "measure-mufcvoly-xj784",
+      "category": "furniture",
+      "type": "measure",
+      "x": 2355,
+      "y": 1345,
+      "width": 2020,
+      "height": 130,
+      "rotation": 90
+    }
+  ],
   "comments": []
 }
