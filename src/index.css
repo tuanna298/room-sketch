@@ -94,33 +94,6 @@ body,
   box-shadow: 0 8px 24px var(--panel-shadow);
 }
 
-.floating-topbar button {
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: var(--accent-text);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.floating-topbar button:hover {
-  background: var(--accent-hover);
-}
-
-.floating-topbar button.secondary {
-  border-color: var(--btn-border);
-  background: var(--btn-bg);
-  color: var(--btn-text);
-}
-
-.floating-topbar button.secondary:hover {
-  background: var(--btn-hover-bg);
-}
-
 .plan-status {
   font-size: 13px;
   color: var(--text-muted);

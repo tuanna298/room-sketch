@@ -79,8 +79,8 @@ hiển thị lẫn mức làm tròn khi kéo vật thể tự do (không khoá t
   như trước — không xung đột với việc pan.
 
 Khung nhìn không còn tự "nhảy" theo mỗi lần thêm/kéo/resize nữa — chỉ tự co
-theo toàn bộ nội dung khi tải trang, Tải từ file, hoặc Undo/Redo, để không phá
-vị trí pan/zoom người dùng vừa tự chỉnh.
+theo toàn bộ nội dung khi tải trang hoặc Undo/Redo, để không phá vị trí
+pan/zoom người dùng vừa tự chỉnh.
 
 ## Thanh công cụ (giữa, dưới cùng)
 
@@ -123,23 +123,17 @@ thông thường của trình duyệt).
 
 ## Lưu trữ
 
-Mọi thay đổi (thêm/xoá/kéo/resize/xoay/nhóm) **tự lưu vào localStorage của
-trình duyệt** ngay sau khi xảy ra — không cần bấm nút nào. Lần mở lại trang
-sau sẽ tự khôi phục đúng bố cục đó; nếu trình duyệt chưa từng lưu gì, trang
-bắt đầu trắng hoàn toàn.
+Mọi thay đổi (thêm/xoá/kéo/resize/xoay/nhóm/bình luận) **tự lưu thẳng vào
+`src/layout.json` trên đĩa** — không cần bấm nút nào, không dùng localStorage
+của trình duyệt nữa. Các thay đổi liên tiếp trong một lượt thao tác (vd. cả
+quá trình kéo một vật thể) được gộp lại (debounce ~600ms) thành một lần ghi
+file, qua endpoint `/api/save-layout` do một plugin của Vite cung cấp (xem
+`vite.config.js`). Trạng thái "Đang lưu…" / "Đã lưu" hiện ở thanh trên.
 
-Ba nút ở thanh trên chỉ thao tác với **file** (để backup/chia sẻ), tách biệt
-với autosave ở trên:
-
-- **Lưu ra file** — xuất bản chụp hiện tại (kèm cỡ ô lưới) vào
-  `src/layout.json`, qua endpoint `/api/save-layout` do một plugin của Vite
-  cung cấp (xem `vite.config.js`) — chỉ hoạt động khi chạy `npm run dev`,
-  không có tác dụng trên bản build tĩnh.
-- **Tải từ file** — nạp lại đúng nội dung đang có trong `src/layout.json`,
-  ghi đè bản vẽ hiện tại (kể cả localStorage).
-
-Bình luận cũng tự lưu vào localStorage và vào `src/layout.json` cùng với
-`items`/`gridSize`.
+Cơ chế này chỉ hoạt động khi chạy `npm run dev` (không có tác dụng trên bản
+build tĩnh `npm run build` — khi đó thay đổi chỉ tồn tại trong phiên hiện
+tại). Mở lại trang sẽ đọc đúng nội dung `src/layout.json` tại thời điểm đó;
+nếu file đang rỗng, trang bắt đầu trắng hoàn toàn.
 
 ## Cấu trúc
 
@@ -151,8 +145,8 @@ Bình luận cũng tự lưu vào localStorage và vào `src/layout.json` cùng 
 - `src/furniture.jsx` — danh mục loại container (`CONTAINER_TYPES`) và nội
   thất (`FURNITURE_TYPES`), cùng hàm vẽ hình dạng theo toạ độ cục bộ
   (0,0) → (width,height) cho từng loại.
-- `src/layout.json` — bản chụp cho hai nút Lưu ra file / Tải từ file; không
-  còn là nguồn dữ liệu chính khi chạy bình thường (đó là localStorage).
+- `src/layout.json` — nguồn dữ liệu chính (items, gridSize, comments); được
+  đọc lúc mở trang và ghi đè tự động sau mỗi thay đổi.
 - `src/App.jsx` — điểm vào, chỉ render `<FloorPlan />`.
-- `vite.config.js` — plugin dev-server nhận danh sách đối tượng và ghi vào
-  `src/layout.json`.
+- `vite.config.js` — plugin dev-server nhận trạng thái mới nhất từ trình
+  duyệt và ghi vào `src/layout.json`.
