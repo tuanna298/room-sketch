@@ -122,25 +122,42 @@ Mặc định nền sáng. Bấm icon mặt trời/mặt trăng ở thanh trên 
 Không hoạt động khi đang gõ trong một ô nhập số (để không phá thao tác gõ
 thông thường của trình duyệt).
 
-## Lưu trữ
+## Lưu trữ — dùng chung qua Supabase
 
 Mọi thay đổi (thêm/xoá/kéo/resize/xoay/nhóm/bình luận) **tự lưu** — không cần
-bấm nút nào — nhưng lưu vào đâu tuỳ vào môi trường chạy, vì `npm run dev` là
-nơi duy nhất có một dev-server ghi được ra đĩa:
+bấm nút nào — lên một bảng dùng chung trên Supabase, nên nhiều người mở cùng
+một link đều thấy chung một bản vẽ, sửa ở máy này thì máy khác tự cập nhật
+gần như ngay lập tức qua Supabase Realtime (không cần tự bấm tải lại trang).
+Các thay đổi liên tiếp trong một lượt thao tác (vd. cả quá trình kéo một vật
+thể) được gộp lại theo debounce ~600ms thành một lần ghi.
 
-- **Chạy `npm run dev` (máy cá nhân)**: ghi thẳng vào `src/layout.json` qua
-  endpoint `/api/save-layout` do một plugin của Vite cung cấp (xem
-  `vite.config.js`). Trạng thái hiện "Đã lưu". Mở lại trang sẽ đọc đúng nội
-  dung file tại thời điểm đó.
-- **Bản deploy tĩnh (`npm run build`, Vercel...)**: không có dev-server hay
-  ổ đĩa chung nào để ghi file thật, nên tự chuyển sang lưu trong
-  **localStorage của trình duyệt người xem**. Trạng thái hiện "Đã lưu (trên
-  trình duyệt này)". Mỗi người xem có bản lưu riêng trên máy họ; `layout.json`
-  lúc này chỉ còn là nội dung khởi tạo mặc định khi trình duyệt đó lần đầu ghé
-  (hoặc xoá localStorage).
+### Thiết lập lần đầu
 
-Cả hai đường đều gộp các thay đổi liên tiếp trong một lượt thao tác (vd. cả
-quá trình kéo một vật thể) theo debounce ~600ms thành một lần lưu.
+1. Tạo tài khoản (miễn phí) và một project mới tại
+   [supabase.com](https://supabase.com).
+2. Vào **SQL Editor** của project, chạy:
+
+   ```sql
+   create table layouts (
+     id text primary key,
+     data jsonb not null,
+     updated_at timestamptz not null default now()
+   );
+
+   alter publication supabase_realtime add table layouts;
+   ```
+
+3. Vào **Project Settings → API**, lấy **Project URL** và khoá **anon public**.
+4. Copy `.env.local.example` thành `.env.local`, điền 2 giá trị đó vào
+   `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY`. File `.env.local` không
+   commit lên git (đã có trong `.gitignore`).
+5. Khởi động lại `npm run dev` (hoặc deploy lại nếu đang chạy trên Vercel —
+   nhớ khai báo 2 biến môi trường trên ở phần cấu hình project của Vercel).
+
+Chưa cấu hình `.env.local` thì app vẫn chạy được bình thường, chỉ tự chuyển
+sang lưu tạm vào **localStorage của riêng trình duyệt đang mở** (trạng thái
+hiện "chưa cấu hình Supabase") — không chia sẻ được với người khác, chỉ dùng
+để xem thử giao diện.
 
 ## Cấu trúc
 
@@ -148,12 +165,12 @@ quá trình kéo một vật thể) theo debounce ~600ms thành một lần lưu
   khung nhìn tự co theo nội dung khi tải/undo), toolbar container/nội thất,
   thanh công cụ Di chuyển/Bàn tay/Bình luận, giao diện sáng/tối, modal hướng
   dẫn, chọn đơn/nhóm/marquee, kéo-di chuyển-cả-cụm, resize tỉ lệ, khoá nhẹ,
-  đường kích thước tự động, undo/redo, clipboard, và toàn bộ phím tắt.
+  undo/redo, clipboard, toàn bộ phím tắt, và đồng bộ dữ liệu qua Supabase.
 - `src/furniture.jsx` — danh mục loại container (`CONTAINER_TYPES`) và nội
   thất (`FURNITURE_TYPES`), cùng hàm vẽ hình dạng theo toạ độ cục bộ
   (0,0) → (width,height) cho từng loại.
-- `src/layout.json` — nguồn dữ liệu chính (items, gridSize, comments); được
-  đọc lúc mở trang và ghi đè tự động sau mỗi thay đổi.
+- `src/supabaseClient.js` — khởi tạo client Supabase từ 2 biến môi trường
+  `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (đọc từ `.env.local`).
+- `src/layout.json` — chỉ còn là nội dung khởi tạo mặc định, dùng để tạo
+  dòng đầu tiên trên Supabase khi bảng `layouts` còn trống.
 - `src/App.jsx` — điểm vào, chỉ render `<FloorPlan />`.
-- `vite.config.js` — plugin dev-server nhận trạng thái mới nhất từ trình
-  duyệt và ghi vào `src/layout.json`.

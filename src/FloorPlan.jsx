@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import fileLayout from "./layout.json";
+import { supabase, PROJECT_ID } from "./supabaseClient";
 import {
   FURNITURE_TYPES,
   CONTAINER_TYPES,
@@ -10,12 +11,12 @@ import {
 
 // Không có căn phòng đóng cứng nào — "container" (khối tường / cột) là một đối
 // tượng như bao đối tượng khác, do người dùng thêm và kéo-giãn để dựng ranh giới
-// phòng hoặc đánh dấu vật cản cố định. Đường kích thước tự xuất hiện giữa một món
-// nội thất và cạnh container gần nhất. Có thể gộp nhiều vật thể thành một nhóm để
+// phòng hoặc đánh dấu vật cản cố định. Có thể gộp nhiều vật thể thành một nhóm để
 // kéo/xoá cùng lúc, có khoá nhẹ khi kéo lại gần vật khác, và đầy đủ phím tắt quen
-// thuộc (Cmd/Ctrl+Z/A/C/X/V/D/G). Toàn bộ trạng thái tự lưu: ở dev ghi thẳng
-// vào src/layout.json trên đĩa, ở bản deploy tĩnh (không có dev-server) tự
-// chuyển sang localStorage của người xem.
+// thuộc (Cmd/Ctrl+Z/A/C/X/V/D/G). Toàn bộ trạng thái tự lưu lên Supabase — dùng
+// chung cho mọi người mở app, tự đồng bộ gần như tức thời qua Realtime (xem
+// supabaseClient.js). Chưa cấu hình Supabase thì tự rớt về chỉ lưu cục bộ trên
+// trình duyệt (không chia sẻ được giữa nhiều người).
 
 const FURNITURE_COLOR = "#c98a4b";
 const SELECT_COLOR = "#2f80ed";
@@ -790,14 +791,10 @@ function HelpModal({ onClose }) {
   );
 }
 
-// Ghi thẳng ra src/layout.json chỉ khả thi khi có dev-server (endpoint
-// /api/save-layout do plugin Vite cung cấp) — một bản deploy tĩnh như Vercel
-// không có gì để chạy plugin đó, và cũng không có ổ đĩa ghi được. Nên ở môi
-// trường dev, layout.json là nguồn dữ liệu chính; ở bản build/deploy tĩnh,
-// tự chuyển sang lưu trong localStorage của trình xem, và bundle của
-// layout.json chỉ còn là nội dung khởi tạo mặc định.
-const IS_DEV = import.meta.env.DEV;
-const PROJECT_STORAGE_KEY = "roomsketch-project-v1";
+// layout.json đóng gói sẵn trong bundle chỉ còn dùng làm bản khởi tạo mặc định
+// cho lần đầu tiên (khi bảng dùng chung trên Supabase chưa có dữ liệu) — không
+// còn là nguồn dữ liệu chính như trước.
+const PROJECT_STORAGE_KEY = "roomsketch-project-v1"; // fallback khi chưa cấu hình Supabase
 
 function fileState() {
   if (Array.isArray(fileLayout)) {
@@ -810,18 +807,19 @@ function fileState() {
   };
 }
 
+function normalizeState(raw) {
+  return {
+    items: raw?.items ?? [],
+    gridSize: raw?.gridSize ?? DEFAULT_GRID,
+    comments: raw?.comments ?? [],
+  };
+}
+
 function loadInitialState() {
-  if (IS_DEV) return fileState();
+  if (supabase) return fileState(); // vẽ tạm bản mặc định, chờ useEffect tải bản dùng chung
   try {
-    const raw = localStorage.getItem(PROJECT_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        items: parsed.items ?? [],
-        gridSize: parsed.gridSize ?? DEFAULT_GRID,
-        comments: parsed.comments ?? [],
-      };
-    }
+    const rawLocal = localStorage.getItem(PROJECT_STORAGE_KEY);
+    if (rawLocal) return normalizeState(JSON.parse(rawLocal));
   } catch {
     // localStorage không khả dụng (chế độ riêng tư, bị chặn...) — dùng bản
     // đóng gói sẵn trong layout.json làm mặc định.
@@ -867,48 +865,136 @@ export default function FloorPlan() {
   const theme = THEME_COLORS[darkMode ? "dark" : "light"];
   const saveTimer = useRef(null);
   const mountedRef = useRef(false);
+  // true khi chưa cấu hình Supabase (không có bản dùng chung nào để chờ tải).
+  const [ready, setReady] = useState(() => !supabase);
+  // Đánh dấu lượt setItems/setGridSize/setComments hiện tại đến từ Supabase
+  // (tải lần đầu hoặc Realtime của người khác) — để không tự lưu ngược lại.
+  const applyingRemoteRef = useRef(false);
+  // JSON của bản đã đồng bộ gần nhất — Realtime báo về đúng bản mình vừa gửi
+  // thì bỏ qua, tránh set lại state vô ích.
+  const lastSyncedRef = useRef(
+    JSON.stringify({
+      items: initialState.items,
+      gridSize: initialState.gridSize,
+      comments: initialState.comments,
+    }),
+  );
 
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
 
+  // Tải bản dùng chung từ Supabase khi mở app (tạo dòng đầu tiên từ bản mặc
+  // định nếu bảng còn trống), rồi lắng nghe Realtime để nhận thay đổi của
+  // người khác gần như ngay lập tức, không cần tự bấm tải lại trang.
+  useEffect(() => {
+    if (!supabase) return undefined;
+    let cancelled = false;
+    setStatus("Đang tải bản dùng chung…");
+
+    async function loadRemote() {
+      const { data, error } = await supabase
+        .from("layouts")
+        .select("data")
+        .eq("id", PROJECT_ID)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        setStatus("Không tải được bản dùng chung — đang xem bản mặc định");
+        setReady(true);
+        return;
+      }
+      if (data?.data) {
+        const state = normalizeState(data.data);
+        applyingRemoteRef.current = true;
+        setItems(state.items);
+        setGridSize(state.gridSize);
+        setComments(state.comments);
+        setView(computeFitViewBox(state.items));
+        lastSyncedRef.current = JSON.stringify(state);
+        setStatus("Đã tải bản dùng chung");
+      } else {
+        const initial = normalizeState({
+          items: itemsRef.current,
+          gridSize,
+          comments,
+        });
+        await supabase.from("layouts").upsert({ id: PROJECT_ID, data: initial });
+        lastSyncedRef.current = JSON.stringify(initial);
+        setStatus("Đã lưu");
+      }
+      setReady(true);
+    }
+    loadRemote();
+
+    const channel = supabase
+      .channel(`layout-${PROJECT_ID}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "layouts",
+          filter: `id=eq.${PROJECT_ID}`,
+        },
+        (payload) => {
+          const state = normalizeState(payload.new?.data);
+          const json = JSON.stringify(state);
+          if (json === lastSyncedRef.current) return; // đúng bản mình vừa gửi
+          lastSyncedRef.current = json;
+          applyingRemoteRef.current = true;
+          setItems(state.items);
+          setGridSize(state.gridSize);
+          setComments(state.comments);
+          setStatus("Vừa cập nhật từ người khác");
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+    // Chỉ chạy một lần khi mount — tải + subscribe là việc của riêng lần mở app.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Tự lưu sau mỗi thay đổi (gộp lại theo AUTOSAVE_DEBOUNCE để một lượt kéo
-  // chỉ lưu một lần). Ở dev, ghi thẳng vào src/layout.json qua endpoint
-  // /api/save-layout do plugin Vite cung cấp. Ở bản deploy tĩnh (không có
-  // dev-server, vd. Vercel), tự chuyển sang lưu vào localStorage của người
-  // xem — không có ổ đĩa chung nào để ghi ra một file thực sự ở đó.
+  // chỉ lưu một lần) lên bảng "layouts" dùng chung trên Supabase — mọi người
+  // mở app đều đọc/ghi cùng một dòng, nên sửa ở máy này thì người khác thấy
+  // ngay (qua Realtime ở trên). Chưa cấu hình Supabase thì lưu tạm vào
+  // localStorage của trình duyệt này (không chia sẻ được với ai khác).
   useEffect(() => {
     if (!mountedRef.current) {
       mountedRef.current = true;
       return undefined;
     }
+    if (applyingRemoteRef.current) {
+      applyingRemoteRef.current = false;
+      return undefined;
+    }
+    if (!ready) return undefined;
     setStatus("Đang lưu…");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      const payload = { gridSize, items, comments };
-      if (!IS_DEV) {
+      const payload = normalizeState({ items, gridSize, comments });
+      if (!supabase) {
         try {
           localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(payload));
-          setStatus("Đã lưu (trên trình duyệt này)");
+          setStatus("Đã lưu (trên trình duyệt này — chưa cấu hình Supabase)");
         } catch {
           setStatus("Không lưu được");
         }
         return;
       }
-      try {
-        const res = await fetch("/api/save-layout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload, null, 2),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        setStatus("Đã lưu");
-      } catch {
-        setStatus("Không lưu được — chỉ hoạt động khi chạy npm run dev");
-      }
+      lastSyncedRef.current = JSON.stringify(payload);
+      const { error } = await supabase
+        .from("layouts")
+        .upsert({ id: PROJECT_ID, data: payload });
+      setStatus(error ? "Không lưu được — kiểm tra kết nối Supabase" : "Đã lưu");
     }, AUTOSAVE_DEBOUNCE);
     return () => clearTimeout(saveTimer.current);
-  }, [items, gridSize, comments]);
+  }, [items, gridSize, comments, ready]);
 
   useEffect(() => {
     try {
