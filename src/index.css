@@ -99,11 +99,140 @@ body,
   color: #8a8a8a;
 }
 
-.plan-shell svg {
+.editor-body {
   flex: 1;
   min-height: 0;
-  max-width: 1100px;
+  width: 100%;
+  max-width: 1400px;
+  display: flex;
+  gap: 14px;
+  padding: 0 16px 16px;
+  align-items: stretch;
+}
+
+.editor-body svg {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   max-height: 74vh;
+  background: #050505;
+  border: 1px solid #1e1e1e;
+  border-radius: 8px;
+}
+
+.furniture-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 108px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: 74vh;
+  padding-right: 2px;
+}
+
+.furniture-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  background: #121212;
+  color: #c9c9c9;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.furniture-btn:hover {
+  border-color: #c98a4b;
+  background: #1b160f;
+}
+
+.furniture-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.properties-panel {
+  width: 220px;
+  flex-shrink: 0;
+  background: #101010;
+  border: 1px solid #1e1e1e;
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 13px;
+  color: #c9c9c9;
+}
+
+.properties-panel.empty {
+  color: #7a7a7a;
+  line-height: 1.5;
+}
+
+.properties-panel h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  color: #f2f2f2;
+}
+
+.prop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.prop-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #9a9a9a;
+}
+
+.prop-field input {
+  font: inherit;
+  font-size: 13px;
+  color: #f2f2f2;
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.prop-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.prop-actions button {
+  flex: 1;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #3a3a3a;
+  background: #1a1a1a;
+  color: #d7d7d7;
+  cursor: pointer;
+}
+
+.prop-actions button:hover {
+  background: #232323;
+}
+
+.prop-actions button.danger {
+  border-color: #7a2e2e;
+  color: #ff8a8a;
+}
+
+.prop-actions button.danger:hover {
+  background: #2a1414;
 }
 
 .legend {
@@ -131,13 +260,6 @@ body,
 
 .swatch.wall {
   background: #e8e8e8;
-}
-
-.swatch.door {
-  background: #f2f2f2;
-  height: 2px;
-  border-top: 2px dashed #f2f2f2;
-  background: none;
 }
 
 .swatch.fixture {
