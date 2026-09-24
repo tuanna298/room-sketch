@@ -15,7 +15,7 @@ npm run dev
 
 ## Container: dựng ranh giới phòng / cột
 
-Mục "Cấu trúc cố định" trong toolbar có 2 khối khởi tạo (Phòng/Tường, Cột) —
+Mục "Cấu trúc" trong toolbar có 2 khối khởi tạo (Phòng/Tường, Cột) —
 về bản chất chỉ là MỘT loại đối tượng hình chữ nhật dùng để đánh dấu vật cố
 định trong không gian: kéo lớn ra thì thành ranh giới phòng, thu nhỏ lại thì
 thành cột hay hộp kỹ thuật. Không có gì bắt buộc phải "là căn phòng" — tuỳ
@@ -103,21 +103,21 @@ Mặc định nền sáng. Bấm icon mặt trời/mặt trăng ở thanh trên 
 
 ## Phím tắt
 
-| Phím | Chức năng |
-| --- | --- |
-| Cmd/Ctrl + Z | Hoàn tác |
-| Cmd/Ctrl + Shift + Z (hoặc Ctrl+Y) | Làm lại |
-| Cmd/Ctrl + A | Chọn tất cả |
-| Cmd/Ctrl + C / X / V | Copy / Cắt / Dán |
-| Cmd/Ctrl + D | Nhân đôi lựa chọn |
-| Cmd/Ctrl + G | Nhóm lại |
-| Cmd/Ctrl + Shift + G | Rã nhóm |
-| Cmd/Ctrl + '+' / '-' | Zoom vào / ra (quanh tâm khung nhìn) |
-| Shift + 1 | Zoom vừa khít toàn bộ nội dung |
-| Shift + 2 | Zoom vừa khít lựa chọn hiện tại |
-| Delete / Backspace | Xoá lựa chọn |
-| Mũi tên | Di chuyển 10mm (giữ Shift: theo ô lưới) |
-| Escape | Bỏ chọn |
+| Phím                               | Chức năng                               |
+| ---------------------------------- | --------------------------------------- |
+| Cmd/Ctrl + Z                       | Hoàn tác                                |
+| Cmd/Ctrl + Shift + Z (hoặc Ctrl+Y) | Làm lại                                 |
+| Cmd/Ctrl + A                       | Chọn tất cả                             |
+| Cmd/Ctrl + C / X / V               | Copy / Cắt / Dán                        |
+| Cmd/Ctrl + D                       | Nhân đôi lựa chọn                       |
+| Cmd/Ctrl + G                       | Nhóm lại                                |
+| Cmd/Ctrl + Shift + G               | Rã nhóm                                 |
+| Cmd/Ctrl + '+' / '-'               | Zoom vào / ra (quanh tâm khung nhìn)    |
+| Shift + 1                          | Zoom vừa khít toàn bộ nội dung          |
+| Shift + 2                          | Zoom vừa khít lựa chọn hiện tại         |
+| Delete / Backspace                 | Xoá lựa chọn                            |
+| Mũi tên                            | Di chuyển 10mm (giữ Shift: theo ô lưới) |
+| Escape                             | Bỏ chọn                                 |
 
 Không hoạt động khi đang gõ trong một ô nhập số (để không phá thao tác gõ
 thông thường của trình duyệt).

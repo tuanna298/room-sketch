@@ -351,7 +351,7 @@ function GridBackground({
 function ObjectToolbar({ theme, onAdd }) {
   return (
     <div className="furniture-toolbar">
-      <div className="toolbar-section-label">Cấu trúc cố định</div>
+      <div className="toolbar-section-label">Cấu trúc</div>
       {CONTAINER_TYPES.map((t) => (
         <button
           key={t.id}
@@ -413,7 +413,11 @@ function NumberField({ label, value, step = 1, min = -100000, onCommit }) {
     editingRef.current = false;
     const v = Number(text);
     if (text.trim() !== "" && !Number.isNaN(v)) {
-      onCommit(clamp(v, min, 100000));
+      const clamped = clamp(v, min, 100000);
+      // Chỉ bắn onCommit khi giá trị thực sự đổi — click vào ô rồi click ra
+      // ngoài (không gõ gì) không được tính là một thay đổi cần lưu.
+      if (clamped !== Math.round(value)) onCommit(clamped);
+      else setText(String(Math.round(value)));
     } else {
       setText(String(Math.round(value)));
     }
@@ -564,9 +568,13 @@ function GridSizeControl({ value, onChange }) {
   const commit = () => {
     editingRef.current = false;
     const v = Number(text);
-    if (!Number.isNaN(v) && text.trim() !== "")
-      onChange(clamp(Math.round(v), MIN_GRID, MAX_GRID));
-    else setText(String(value));
+    if (!Number.isNaN(v) && text.trim() !== "") {
+      const clamped = clamp(Math.round(v), MIN_GRID, MAX_GRID);
+      if (clamped !== value) onChange(clamped);
+      else setText(String(value));
+    } else {
+      setText(String(value));
+    }
   };
   return (
     <label className="grid-size-field">
@@ -919,7 +927,9 @@ export default function FloorPlan() {
           gridSize,
           comments,
         });
-        await supabase.from("layouts").upsert({ id: PROJECT_ID, data: initial });
+        await supabase
+          .from("layouts")
+          .upsert({ id: PROJECT_ID, data: initial });
         lastSyncedRef.current = JSON.stringify(initial);
         setStatus("Đã lưu");
       }
@@ -991,7 +1001,9 @@ export default function FloorPlan() {
       const { error } = await supabase
         .from("layouts")
         .upsert({ id: PROJECT_ID, data: payload });
-      setStatus(error ? "Không lưu được — kiểm tra kết nối Supabase" : "Đã lưu");
+      setStatus(
+        error ? "Không lưu được — kiểm tra kết nối Supabase" : "Đã lưu",
+      );
     }, AUTOSAVE_DEBOUNCE);
     return () => clearTimeout(saveTimer.current);
   }, [items, gridSize, comments, ready]);
