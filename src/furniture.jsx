@@ -6,6 +6,7 @@
 
 export const MIN_SIZE = 100 // mm — kích thước nhỏ nhất khi thu nhỏ một đối tượng
 const CONTAINER_STROKE = 20 // mm — viền container cố định, không phình theo kích thước
+const FURNITURE_STROKE = 10 // mm — viền nội thất cố định, đồng bộ giữa mọi loại
 
 export const FURNITURE_TYPES = [
   { id: 'bed', label: 'Giường', width: 1600, height: 2000 },
@@ -52,7 +53,7 @@ export function FurnitureShape({ type, w, h, color }) {
   const isContainer = type === 'room' || type === 'column'
   const common = {
     stroke: color,
-    strokeWidth: isContainer ? CONTAINER_STROKE : Math.max(4, Math.min(w, h) * 0.02),
+    strokeWidth: isContainer ? CONTAINER_STROKE : FURNITURE_STROKE,
     fill: 'none',
   }
 

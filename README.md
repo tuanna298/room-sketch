@@ -56,14 +56,16 @@ hiện tại, sau đó:
 ## Đường kích thước tự động
 
 Không còn đường kích thước vẽ sẵn nào. Với mỗi món nội thất, nếu nó nằm gần
-cạnh một container (khoảng cách ≤ 300mm, kể cả đúng 0mm khi áp sát tường) và
-còn chồng chiều còn lại lên container đó, một đường kích thước xanh sẽ tự
-hiện ra giữa hai cạnh, ghi rõ khoảng cách (mm) — biến mất ngay khi kéo món đồ
-ra xa hơn ngưỡng đó.
+cạnh một container (khoảng cách ≤ 150mm, kể cả đúng 0mm khi áp sát tường) và
+còn chồng chiều còn lại lên container đó, một đường kích thước xanh dạng
+mũi tên đôi "↕"/"↔" kèm số đo (mm) sẽ tự hiện ra — không vẽ ngay trong khe hở
+(khe đó có lúc gần như bằng 0, khó đọc) mà đặt cố định cách mặt tường 150mm,
+nối tới mặt tường bằng một đường nét đứt mảnh. Biến mất ngay khi kéo món đồ
+ra xa hơn ngưỡng 150mm.
 
 ## Ô lưới nền
 
-Ô lưới mặc định 400×400mm (đúng theo ô gạch lát phổ biến), ô đậm mỗi 4 ô nhỏ.
+Ô lưới mặc định 100×100mm, ô đậm mỗi 4 ô nhỏ.
 Chỉnh lại kích cỡ ô ở khung "Ô lưới" trên thanh công cụ — áp dụng ngay cho cả
 hiển thị lẫn mức làm tròn khi kéo vật thể tự do (không khoá theo vật khác).
 

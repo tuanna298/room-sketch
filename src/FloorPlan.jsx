@@ -56,7 +56,7 @@ const MAX_VIEW_W = 40000; // mm — zoom ra xa nhất
 const ZOOM_WHEEL_SENSITIVITY = 0.0022;
 const ZOOM_KEY_FACTOR = 0.85;
 
-const DEFAULT_GRID = 400; // mm — kích cỡ mỗi ô lưới, ánh xạ theo ô gạch thực tế
+const DEFAULT_GRID = 100; // mm — kích cỡ mỗi ô lưới, ánh xạ theo ô gạch thực tế
 const MIN_GRID = 50;
 const MAX_GRID = 2000;
 const GRID_MAJOR_MULT = 4; // đường lưới đậm cứ mỗi 4 ô
@@ -64,8 +64,10 @@ const GRID_MAJOR_MULT = 4; // đường lưới đậm cứ mỗi 4 ô
 const RESIZE_SNAP = 10; // mm — làm tròn khi kéo góc/tay cầm
 const HANDLE_SIZE = 70; // mm — kích thước ô vuông tay cầm ở góc
 const ALIGN_SNAP = 60; // mm — "khoá nhẹ" khi cạnh/tâm vật thể gần trùng vật khác
-const AUTO_DIM_THRESHOLD = 300; // mm — hiện đường kích thước nếu cách container trong khoảng này
+const AUTO_DIM_THRESHOLD = 150; // mm — hiện đường kích thước nếu cách tường trong khoảng này
+const AUTO_DIM_OFFSET = 150; // mm — đường kích thước vẽ cách mặt tường một khoảng cố định này
 const AUTO_DIM_EPS = 2; // mm — dung sai nổi dấu phẩy động, tránh mất hiển thị khi khoảng cách ~0
+const AUTO_DIM_LEN = 120; // mm — chiều dài đường kích thước (đầu mút tới đầu mút mũi tên)
 const NUDGE_STEP = 10; // mm — phím mũi tên
 const HISTORY_LIMIT = 60;
 const AUTOSAVE_DEBOUNCE = 600; // ms — gộp các thay đổi liên tiếp (vd. cả một lượt kéo) thành một lần ghi file
@@ -267,8 +269,10 @@ function computeAlignSnap(box, others) {
 }
 
 // Với một món nội thất, dò các container mà nó nằm gần cạnh (trong AUTO_DIM_THRESHOLD
-// mm) để phát sinh đường kích thước tự động. AUTO_DIM_EPS bù sai số dấu phẩy động khi
-// khoảng cách thực chất là 0 (vd. vừa khoá nhẹ vào đúng cạnh tường).
+// mm) để phát sinh đường kích thước tự động. Đường kích thước không vẽ ngay trong khe
+// hở (khe đó có thể gần như bằng 0, rất khó đọc) mà vẽ cố định cách mặt tường một
+// khoảng AUTO_DIM_OFFSET, ghi rõ khoảng cách thật (label) giữa vật thể và tường.
+// AUTO_DIM_EPS bù sai số dấu phẩy động khi khoảng cách thực chất là 0.
 function computeAutoDims(item, containers) {
   const itemBox = toScreenBox(item);
   const dims = [];
@@ -287,10 +291,9 @@ function computeAutoDims(item, containers) {
         dims.push({
           dimKey: `${item.id}-${c.id}-top`,
           axis: "v",
-          x1: midX,
-          y1: cBox.y,
-          x2: midX,
-          y2: itemBox.y,
+          pos: midX,
+          wallCoord: cBox.y,
+          center: cBox.y + AUTO_DIM_OFFSET,
           label: Math.max(0, Math.round(gapTop)),
         });
       }
@@ -299,10 +302,9 @@ function computeAutoDims(item, containers) {
         dims.push({
           dimKey: `${item.id}-${c.id}-bottom`,
           axis: "v",
-          x1: midX,
-          y1: itemBox.y + itemBox.height,
-          x2: midX,
-          y2: cBox.y + cBox.height,
+          pos: midX,
+          wallCoord: cBox.y + cBox.height,
+          center: cBox.y + cBox.height - AUTO_DIM_OFFSET,
           label: Math.max(0, Math.round(gapBottom)),
         });
       }
@@ -314,10 +316,9 @@ function computeAutoDims(item, containers) {
         dims.push({
           dimKey: `${item.id}-${c.id}-left`,
           axis: "h",
-          x1: cBox.x,
-          y1: midY,
-          x2: itemBox.x,
-          y2: midY,
+          pos: midY,
+          wallCoord: cBox.x,
+          center: cBox.x + AUTO_DIM_OFFSET,
           label: Math.max(0, Math.round(gapLeft)),
         });
       }
@@ -326,10 +327,9 @@ function computeAutoDims(item, containers) {
         dims.push({
           dimKey: `${item.id}-${c.id}-right`,
           axis: "h",
-          x1: itemBox.x + itemBox.width,
-          y1: midY,
-          x2: cBox.x + cBox.width,
-          y2: midY,
+          pos: midY,
+          wallCoord: cBox.x + cBox.width,
+          center: cBox.x + cBox.width - AUTO_DIM_OFFSET,
           label: Math.max(0, Math.round(gapRight)),
         });
       }
@@ -338,41 +338,37 @@ function computeAutoDims(item, containers) {
   return dims;
 }
 
-function AutoDim({ x1, y1, x2, y2, axis, label }) {
-  const midX = (x1 + x2) / 2;
-  const midY = (y1 + y2) / 2;
-  const tick = 34;
+function AutoDim({ pos, wallCoord, center, axis, label }) {
+  const half = AUTO_DIM_LEN / 2;
+  const a = center - half;
+  const b = center + half;
   return (
     <g pointerEvents="none">
-      <line
-        x1={x1}
-        y1={y1}
-        x2={x2}
-        y2={y2}
-        stroke={DIM_COLOR}
-        strokeWidth={4}
-      />
       {axis === "v" ? (
         <>
           <line
-            x1={x1 - tick}
-            y1={y1}
-            x2={x1 + tick}
-            y2={y1}
+            x1={pos}
+            y1={wallCoord}
+            x2={pos}
+            y2={center}
             stroke={DIM_COLOR}
-            strokeWidth={4}
+            strokeWidth={2}
+            strokeDasharray="10 10"
+            opacity={0.6}
           />
           <line
-            x1={x2 - tick}
-            y1={y2}
-            x2={x2 + tick}
-            y2={y2}
+            x1={pos}
+            y1={a}
+            x2={pos}
+            y2={b}
             stroke={DIM_COLOR}
-            strokeWidth={4}
+            strokeWidth={5}
+            markerStart="url(#dim-arrow)"
+            markerEnd="url(#dim-arrow)"
           />
           <text
-            x={midX + 20}
-            y={midY}
+            x={pos + 24}
+            y={center}
             fill={DIM_COLOR}
             fontSize={70}
             fontFamily="'JetBrains Mono', ui-monospace, monospace"
@@ -384,24 +380,28 @@ function AutoDim({ x1, y1, x2, y2, axis, label }) {
       ) : (
         <>
           <line
-            x1={x1}
-            y1={y1 - tick}
-            x2={x1}
-            y2={y1 + tick}
+            x1={wallCoord}
+            y1={pos}
+            x2={center}
+            y2={pos}
             stroke={DIM_COLOR}
-            strokeWidth={4}
+            strokeWidth={2}
+            strokeDasharray="10 10"
+            opacity={0.6}
           />
           <line
-            x1={x2}
-            y1={y2 - tick}
-            x2={x2}
-            y2={y2 + tick}
+            x1={a}
+            y1={pos}
+            x2={b}
+            y2={pos}
             stroke={DIM_COLOR}
-            strokeWidth={4}
+            strokeWidth={5}
+            markerStart="url(#dim-arrow)"
+            markerEnd="url(#dim-arrow)"
           />
           <text
-            x={midX}
-            y={midY - 20}
+            x={center}
+            y={pos - 24}
             fill={DIM_COLOR}
             fontSize={70}
             fontFamily="'JetBrains Mono', ui-monospace, monospace"
@@ -483,6 +483,17 @@ function GridBackground({
             strokeWidth={3}
           />
         </pattern>
+        <marker
+          id="dim-arrow"
+          viewBox="0 0 10 10"
+          refX={5}
+          refY={5}
+          markerWidth={7}
+          markerHeight={7}
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1 L 9 5 L 0 9 Z" fill={DIM_COLOR} />
+        </marker>
       </defs>
       <rect
         x={-GRID_SPAN}
