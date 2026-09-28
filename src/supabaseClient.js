@@ -15,4 +15,6 @@ const anonKey =
 // chạy chế độ chỉ-lưu-cục-bộ (localStorage) kèm cảnh báo, thay vì crash cả app.
 export const supabase = url && anonKey ? createClient(url, anonKey) : null;
 
-export const PROJECT_ID = "default";
+// id của "phòng" duy nhất trước khi có tính năng nhiều phòng (RoomList) — giữ
+// lại để RoomList nhận diện và hiển thị đúng dữ liệu cũ thay vì để nó mồ côi.
+export const LEGACY_ROOM_ID = "default";

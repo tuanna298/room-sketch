@@ -126,14 +126,20 @@ Mặc định nền sáng. Bấm icon mặt trời/mặt trăng ở thanh trên 
 Không hoạt động khi đang gõ trong một ô nhập số (để không phá thao tác gõ
 thông thường của trình duyệt).
 
-## Lưu trữ — dùng chung qua Supabase
+## Nhiều phòng, nhiều người cùng sửa — qua Supabase
 
-Mọi thay đổi (thêm/xoá/kéo/resize/xoay/nhóm/bình luận) **tự lưu** — không cần
-bấm nút nào — lên một bảng dùng chung trên Supabase, nên nhiều người mở cùng
-một link đều thấy chung một bản vẽ, sửa ở máy này thì máy khác tự cập nhật
-gần như ngay lập tức qua Supabase Realtime (không cần tự bấm tải lại trang).
-Các thay đổi liên tiếp trong một lượt thao tác (vd. cả quá trình kéo một vật
-thể) được gộp lại theo debounce ~600ms thành một lần ghi.
+Mở app hiện ra **danh sách phòng** trước tiên (mỗi phòng là một bản vẽ độc
+lập) — tạo phòng mới, đổi tên, xoá, hoặc mở một phòng có sẵn để vào canvas.
+Mỗi phòng có link riêng (`#/r/<id>/<tên>`), gửi đúng link thì mọi người mở
+sẽ vào chung phòng đó.
+
+Trong một phòng, mọi thay đổi (thêm/xoá/kéo/resize/xoay/nhóm/bình luận)
+**tự lưu** — không cần bấm nút nào — lên bảng `layouts` trên Supabase, sửa ở
+máy này thì máy khác tự cập nhật gần như ngay lập tức qua Supabase Realtime
+(không cần tự bấm tải lại trang). Danh sách phòng cũng tự cập nhật tương tự
+khi có ai tạo/đổi tên/xoá phòng. Các thay đổi liên tiếp trong một lượt thao
+tác (vd. cả quá trình kéo một vật thể) được gộp lại theo debounce ~600ms
+thành một lần ghi.
 
 ### Thiết lập lần đầu
 
@@ -144,6 +150,7 @@ thể) được gộp lại theo debounce ~600ms thành một lần ghi.
    ```sql
    create table layouts (
      id text primary key,
+     name text not null default 'Phòng chưa đặt tên',
      data jsonb not null,
      updated_at timestamptz not null default now()
    );
@@ -151,17 +158,25 @@ thể) được gộp lại theo debounce ~600ms thành một lần ghi.
    alter publication supabase_realtime add table layouts;
    ```
 
+   Đã tạo bảng `layouts` từ trước (bản chỉ 1 phòng) thì chạy thêm câu này để
+   nâng cấp thay vì tạo lại:
+
+   ```sql
+   alter table layouts add column if not exists name text not null default 'Phòng chưa đặt tên';
+   ```
+
 3. Vào **Project Settings → API**, lấy **Project URL** và khoá **anon public**.
 4. Copy `.env.local.example` thành `.env.local`, điền 2 giá trị đó vào
    `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY`. File `.env.local` không
-   commit lên git (đã có trong `.gitignore`).
-5. Khởi động lại `npm run dev` (hoặc deploy lại nếu đang chạy trên Vercel —
-   nhớ khai báo 2 biến môi trường trên ở phần cấu hình project của Vercel).
+   commit lên git (đã có trong `.gitignore`). Deploy lên Vercel thì khai báo
+   2 biến này (có hoặc không tiền tố `VITE_` đều được, xem
+   `src/supabaseClient.js`) ở phần cấu hình project.
+5. Khởi động lại `npm run dev` (hoặc deploy lại nếu đang chạy trên Vercel).
 
-Chưa cấu hình `.env.local` thì app vẫn chạy được bình thường, chỉ tự chuyển
-sang lưu tạm vào **localStorage của riêng trình duyệt đang mở** (trạng thái
-hiện "chưa cấu hình Supabase") — không chia sẻ được với người khác, chỉ dùng
-để xem thử giao diện.
+Chưa cấu hình `.env.local` thì app vẫn chạy được bình thường — danh sách
+phòng và dữ liệu từng phòng tự chuyển sang lưu trong **localStorage của
+riêng trình duyệt đang mở** (trạng thái hiện "chưa cấu hình Supabase"),
+không chia sẻ được với người khác, chỉ dùng để xem thử giao diện.
 
 ## Cấu trúc
 
@@ -173,8 +188,11 @@ hiện "chưa cấu hình Supabase") — không chia sẻ được với ngườ
 - `src/furniture.jsx` — danh mục loại container (`CONTAINER_TYPES`) và nội
   thất (`FURNITURE_TYPES`), cùng hàm vẽ hình dạng theo toạ độ cục bộ
   (0,0) → (width,height) cho từng loại.
+- `src/RoomList.jsx` — màn hình danh sách phòng: tạo/đổi tên/xoá/mở phòng,
+  tự cập nhật qua Realtime khi có người khác thay đổi danh sách.
 - `src/supabaseClient.js` — khởi tạo client Supabase từ 2 biến môi trường
   `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (đọc từ `.env.local`).
-- `src/layout.json` — chỉ còn là nội dung khởi tạo mặc định, dùng để tạo
-  dòng đầu tiên trên Supabase khi bảng `layouts` còn trống.
-- `src/App.jsx` — điểm vào, chỉ render `<FloorPlan />`.
+- `src/layout.json` — chỉ còn là nội dung khởi tạo mặc định cho phòng đầu
+  tiên khi chưa cấu hình Supabase.
+- `src/App.jsx` — điều hướng bằng hash URL (`#/r/<id>/<tên>`) giữa
+  `<RoomList />` (mặc định) và `<FloorPlan />` (khi đã chọn một phòng).

@@ -100,6 +100,18 @@ body,
   white-space: nowrap;
 }
 
+.plan-room-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 4px;
+  border-right: 1px solid var(--panel-border);
+}
+
 .grid-size-field {
   display: inline-flex;
   align-items: center;
@@ -552,4 +564,172 @@ body,
   .floating-topbar {
     max-width: calc(100vw - 280px);
   }
+}
+
+/* ===== Màn hình danh sách phòng (RoomList) ===== */
+.room-list-shell {
+  overflow: auto;
+  background: var(--panel-bg);
+}
+
+.room-list-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+.room-list-header h1 {
+  margin: 0 0 8px;
+  font-size: 26px;
+}
+
+.room-list-header p {
+  margin: 0 0 28px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.room-create-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.room-create-form input {
+  flex: 1;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.room-create-form button {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.room-create-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.room-list-error {
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--danger-border);
+  background: var(--danger-hover-bg);
+  color: var(--danger-text);
+  font-size: 13px;
+}
+
+.room-list-error pre {
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text);
+  overflow-x: auto;
+  font-size: 12px;
+}
+
+.room-list-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.room-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.room-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 6px 6px 16px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--btn-bg);
+}
+
+.room-card-open {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font: inherit;
+  text-align: left;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.room-card input {
+  flex: 1;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.room-card-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.room-card-time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.room-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.room-card-actions button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  cursor: pointer;
+}
+
+.room-card-actions button:hover {
+  background: var(--btn-hover-bg);
+}
+
+.room-card-actions button.danger {
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+
+.room-card-actions button.danger:hover {
+  background: var(--danger-hover-bg);
 }

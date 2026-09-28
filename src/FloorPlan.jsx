@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import fileLayout from "./layout.json";
-import { supabase, PROJECT_ID } from "./supabaseClient";
+import { supabase } from "./supabaseClient";
 import {
   FURNITURE_TYPES,
   CONTAINER_TYPES,
@@ -56,7 +56,7 @@ const MAX_VIEW_W = 40000; // mm — zoom ra xa nhất
 const ZOOM_WHEEL_SENSITIVITY = 0.0022;
 const ZOOM_KEY_FACTOR = 0.85;
 
-const DEFAULT_GRID = 100; // mm — kích cỡ mỗi ô lưới, ánh xạ theo ô gạch thực tế
+export const DEFAULT_GRID = 100; // mm — kích cỡ mỗi ô lưới, ánh xạ theo ô gạch thực tế
 const MIN_GRID = 50;
 const MAX_GRID = 2000;
 const GRID_MAJOR_MULT = 4; // đường lưới đậm cứ mỗi 4 ô
@@ -677,6 +677,13 @@ function IconMoon() {
     </svg>
   );
 }
+function IconBack() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M19 12H5M11 6l-6 6 6 6" />
+    </svg>
+  );
+}
 function IconHelp() {
   return (
     <svg {...ICON_PROPS} width={22} height={22}>
@@ -834,7 +841,9 @@ function HelpModal({ onClose }) {
 // layout.json đóng gói sẵn trong bundle chỉ còn dùng làm bản khởi tạo mặc định
 // cho lần đầu tiên (khi bảng dùng chung trên Supabase chưa có dữ liệu) — không
 // còn là nguồn dữ liệu chính như trước.
-const PROJECT_STORAGE_KEY = "roomsketch-project-v1"; // fallback khi chưa cấu hình Supabase
+// Mỗi phòng lưu localStorage riêng theo id, để chế độ chưa cấu hình Supabase
+// cũng phân biệt được nhiều phòng khác nhau (xem RoomList.jsx).
+const localKey = (roomId) => `roomsketch-project-v1:${roomId}`;
 
 function fileState() {
   if (Array.isArray(fileLayout)) {
@@ -855,10 +864,10 @@ function normalizeState(raw) {
   };
 }
 
-function loadInitialState() {
+function loadInitialState(roomId) {
   if (supabase) return fileState(); // vẽ tạm bản mặc định, chờ useEffect tải bản dùng chung
   try {
-    const rawLocal = localStorage.getItem(PROJECT_STORAGE_KEY);
+    const rawLocal = localStorage.getItem(localKey(roomId));
     if (rawLocal) return normalizeState(JSON.parse(rawLocal));
   } catch {
     // localStorage không khả dụng (chế độ riêng tư, bị chặn...) — dùng bản
@@ -875,8 +884,8 @@ function loadInitialDarkMode() {
   }
 }
 
-export default function FloorPlan() {
-  const initialState = useRef(loadInitialState()).current;
+export default function FloorPlan({ roomId, roomName, onBack }) {
+  const initialState = useRef(loadInitialState(roomId)).current;
   const [items, setItems] = useState(initialState.items);
   const [gridSize, setGridSize] = useState(initialState.gridSize);
   const [comments, setComments] = useState(initialState.comments);
@@ -937,7 +946,7 @@ export default function FloorPlan() {
       const { data, error } = await supabase
         .from("layouts")
         .select("data")
-        .eq("id", PROJECT_ID)
+        .eq("id", roomId)
         .maybeSingle();
       if (cancelled) return;
       if (error) {
@@ -953,16 +962,14 @@ export default function FloorPlan() {
         setComments(state.comments);
         setView(computeFitViewBox(state.items));
         lastSyncedRef.current = JSON.stringify(state);
-        setStatus("Đã tải bản dùng chung");
+        setStatus("Đã tải");
       } else {
         const initial = normalizeState({
           items: itemsRef.current,
           gridSize,
           comments,
         });
-        await supabase
-          .from("layouts")
-          .upsert({ id: PROJECT_ID, data: initial });
+        await supabase.from("layouts").upsert({ id: roomId, data: initial });
         lastSyncedRef.current = JSON.stringify(initial);
         setStatus("Đã lưu");
       }
@@ -971,14 +978,14 @@ export default function FloorPlan() {
     loadRemote();
 
     const channel = supabase
-      .channel(`layout-${PROJECT_ID}`)
+      .channel(`layout-${roomId}`)
       .on(
         "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
           table: "layouts",
-          filter: `id=eq.${PROJECT_ID}`,
+          filter: `id=eq.${roomId}`,
         },
         (payload) => {
           const state = normalizeState(payload.new?.data);
@@ -1023,7 +1030,7 @@ export default function FloorPlan() {
       const payload = normalizeState({ items, gridSize, comments });
       if (!supabase) {
         try {
-          localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(payload));
+          localStorage.setItem(localKey(roomId), JSON.stringify(payload));
           setStatus("Đã lưu (trên trình duyệt này — chưa cấu hình Supabase)");
         } catch {
           setStatus("Không lưu được");
@@ -1033,13 +1040,13 @@ export default function FloorPlan() {
       lastSyncedRef.current = JSON.stringify(payload);
       const { error } = await supabase
         .from("layouts")
-        .upsert({ id: PROJECT_ID, data: payload });
+        .upsert({ id: roomId, data: payload });
       setStatus(
         error ? "Không lưu được — kiểm tra kết nối Supabase" : "Đã lưu",
       );
     }, AUTOSAVE_DEBOUNCE);
     return () => clearTimeout(saveTimer.current);
-  }, [items, gridSize, comments, ready]);
+  }, [items, gridSize, comments, ready, roomId]);
 
   useEffect(() => {
     try {
@@ -1524,7 +1531,9 @@ export default function FloorPlan() {
         const idSet = new Set(ids);
         const selected = prev.filter((it) => idSet.has(it.id));
         const rest = prev.filter((it) => !idSet.has(it.id));
-        return dir === "front" ? [...rest, ...selected] : [...selected, ...rest];
+        return dir === "front"
+          ? [...rest, ...selected]
+          : [...selected, ...rest];
       });
     },
     [pushHistory],
@@ -1815,6 +1824,15 @@ export default function FloorPlan() {
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="floating-topbar">
+        <button
+          type="button"
+          className="icon-btn"
+          title="Về danh sách phòng"
+          onClick={onBack}
+        >
+          <IconBack />
+        </button>
+        {roomName && <span className="plan-room-name">{roomName}</span>}
         <button
           type="button"
           className="icon-btn theme-toggle"
